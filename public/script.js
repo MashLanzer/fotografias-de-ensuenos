@@ -346,6 +346,162 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'ArrowLeft') showImage(-1);
         if (e.key === 'ArrowRight') showImage(1);
     });
+
+    // --- I18n / Translation Logic ---
+    const translations = {
+        es: {
+            nav_home: "Inicio",
+            nav_about: "Nosotros",
+            nav_portfolio: "Portafolio",
+            nav_services: "Servicios",
+            nav_testimonials: "Historias",
+            nav_book: "Reservar",
+
+            hero_title: "Capturando el Alma<br>de tus Recuerdos",
+            hero_subtitle: "Fotografía que cuenta tu historia con naturalidad y emoción.",
+            hero_cta_book: "Agendar Sesión",
+            hero_cta_gallery: "Ver Galería",
+
+            about_title: "Nuestra Esencia",
+            about_subtitle: "Más que fotos, creamos legados.",
+            about_h3: "Memorias que perduran",
+            about_p1: "En <strong>Fotografías Ensueños</strong>, creemos que cada instante es un tesoro fugaz. La risa de un niño, la lágrima de felicidad en una boda, el abrazo cálido de una familia; son momentos que merecen ser congelados en el tiempo.",
+            about_p2: "No solo tomamos fotos; tejemos historias con luz y sentimiento. Nuestro estudio es un espacio donde la magia sucede, donde te sentirás en casa y donde tu única preocupación será ser tú mismo. Nosotros nos encargamos de capturar esa belleza única que irradias.",
+            about_sig_p: "Con cariño,",
+            about_sig_name: "El Equipo de Fotografías Ensueños",
+
+            services_title: "Nuestros Servicios",
+            services_subtitle: "Experiencias diseñadas para ti.",
+            service_1_title: "Bodas de Cuento",
+            service_1_desc: "Capturamos el \"sí, acepto\" y cada mirada cómplice con un estilo romántico y documental.",
+            service_2_title: "Niños y Bebés",
+            service_2_desc: "La inocencia y la alegría espontánea de los más pequeños, inmortalizadas para siempre.",
+            service_3_title: "Quinceañeras",
+            service_3_desc: "Una sesión mágica para celebrar la transición de niña a mujer, llena de glamour y sueños.",
+            service_4_title: "Retratos Familiares",
+            service_4_desc: "Un legado visual del amor que une a tu familia, en estudio o locaciones naturales.",
+
+            portfolio_title: "Galería de Sueños",
+            filter_all: "Todo",
+            filter_wedding: "Bodas",
+            filter_family: "Familia",
+            filter_portrait: "Retratos",
+
+            contact_title: "Hablemos de tu idea",
+            contact_desc: "¿Listo para crear magia juntos? Contáctanos para reservar tu fecha o aclarar dudas.",
+            info_whatsapp: "WhatsApp",
+            info_whatsapp_sub: "(Respuesta rápida)",
+            info_studio: "Estudio",
+            info_email: "Email",
+
+            ph_name: "Tu Nombre",
+            ph_email: "Tu Email",
+            ph_select_type: "Tipo de Sesión",
+            opt_wedding: "Boda",
+            opt_family: "Familia",
+            opt_xv: "XV Años",
+            opt_other: "Otro",
+            ph_message: "Cuéntanos un poco más...",
+            btn_send: "Enviar Mensaje",
+
+            footer_rights: "© 2024 Fotografías Ensueños. Todos los derechos reservados.",
+            lbl_before: "Antes",
+            lbl_after: "Después"
+        },
+        en: {
+            nav_home: "Home",
+            nav_about: "About",
+            nav_portfolio: "Portfolio",
+            nav_services: "Services",
+            nav_testimonials: "Stories",
+            nav_book: "Book Now",
+
+            hero_title: "Capturing the Soul<br>of Your Memories",
+            hero_subtitle: "Photography that tells your story with naturalness and emotion.",
+            hero_cta_book: "Book Session",
+            hero_cta_gallery: "View Gallery",
+
+            about_title: "Our Essence",
+            about_subtitle: "More than photos, we create legacies.",
+            about_h3: "Memories that Last",
+            about_p1: "At <strong>Dream Photography</strong>, we believe every moment is a fleeting treasure. A child's laughter, a happy tear at a wedding, a warm family hug; these are moments that deserve to be frozen in time.",
+            about_p2: "We don't just take photos; we weave stories with light and feeling. Our studio is a space where magic happens, where you'll feel at home and your only concern is being yourself. We take care of capturing that unique beauty you radiate.",
+            about_sig_p: "With love,",
+            about_sig_name: "The Dream Photography Team",
+
+            services_title: "Our Services",
+            services_subtitle: "Experiences designed for you.",
+            service_1_title: "Fairytale Weddings",
+            service_1_desc: "We capture the \"I do\" and every knowing look with a romantic and documentary style.",
+            service_2_title: "Kids & Babies",
+            service_2_desc: "The innocence and spontaneous joy of the little ones, immortalized forever.",
+            service_3_title: "Quinceañeras / Sweet 16",
+            service_3_desc: "A magical session to celebrate the transition from girl to woman, full of glamour and dreams.",
+            service_4_title: "Family Portraits",
+            service_4_desc: "A visual legacy of the love that unites your family, in-studio or natural locations.",
+
+            portfolio_title: "Gallery of Dreams",
+            filter_all: "All",
+            filter_wedding: "Weddings",
+            filter_family: "Family",
+            filter_portrait: "Portraits",
+
+            contact_title: "Let's Talk",
+            contact_desc: "Ready to create magic together? Contact us to book your date or clarify doubts.",
+            info_whatsapp: "WhatsApp",
+            info_whatsapp_sub: "(Quick response)",
+            info_studio: "Studio",
+            info_email: "Email",
+
+            ph_name: "Your Name",
+            ph_email: "Your Email",
+            ph_select_type: "Session Type",
+            opt_wedding: "Wedding",
+            opt_family: "Family",
+            opt_xv: "Sweet 16 / XV",
+            opt_other: "Other",
+            ph_message: "Tell us a bit more...",
+            btn_send: "Send Message",
+
+            footer_rights: "© 2024 Dream Photography. All rights reserved.",
+            lbl_before: "Before",
+            lbl_after: "After"
+        }
+    };
+
+    function updateLanguage(lang) {
+        // Fallback to Spanish if lang not strictly 'en'
+        const selectedLang = lang.startsWith('en') ? 'en' : 'es';
+        const t = translations[selectedLang];
+
+        // Update text content
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (t[key]) {
+                // If the key specifically allows HTML (hero title), use innerHTML
+                if (key === 'hero_title' || key.includes('about_p')) {
+                    el.innerHTML = t[key];
+                } else {
+                    el.textContent = t[key];
+                }
+            }
+        });
+
+        // Update placeholders
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+            const key = el.getAttribute('data-i18n-placeholder');
+            if (t[key]) {
+                el.placeholder = t[key];
+            }
+        });
+
+        // Update HTML lang attribute
+        document.documentElement.lang = selectedLang;
+    }
+
+    // Auto-detect language
+    const userLang = navigator.language || navigator.userLanguage;
+    updateLanguage(userLang);
 });
 
 // Preloader Logic
