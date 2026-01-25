@@ -725,6 +725,10 @@ footer {
     color: var(--white);
 }
 
+.footer-logo .dot {
+    color: var(--accent-color);
+}
+
 .social-links {
     margin-bottom: 20px;
 }
