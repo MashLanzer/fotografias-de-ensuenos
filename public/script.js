@@ -212,7 +212,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Lightbox Gallery ---
     const lightbox = document.getElementById('lightbox');
-    const lightboxImg = document.getElementById('lightbox-img');
+    const lightboxImgAfter = document.getElementById('lightbox-img-after');
+    const lightboxImgBefore = document.getElementById('lightbox-img-before');
+    const comparisonContainer = document.querySelector('.comparison-container');
+    const scroller = document.getElementById('scroller');
+
     const closeBtn = document.querySelector('.close-lightbox');
     const prevBtn = document.querySelector('.prev');
     const nextBtn = document.querySelector('.next');
@@ -223,14 +227,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function openLightbox(index) {
         lightboxIndex = index;
-        lightboxImg.src = images[lightboxIndex];
+        lightboxImgAfter.src = images[lightboxIndex];
+        lightboxImgBefore.src = images[lightboxIndex];
+
+        // Reset slider
+        if (comparisonContainer) comparisonContainer.style.setProperty('--pos', '50%');
+
         lightbox.classList.add('active');
-        document.body.style.overflow = 'hidden'; // Stop scrolling
+        document.body.style.overflow = 'hidden';
     }
 
     function closeModal() {
         lightbox.classList.remove('active');
-        document.body.style.overflow = 'auto'; // Restore scrolling
+        document.body.style.overflow = 'auto';
     }
 
     function showImage(n) {
@@ -240,7 +249,50 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (lightboxIndex < 0) {
             lightboxIndex = images.length - 1;
         }
-        lightboxImg.src = images[lightboxIndex];
+        lightboxImgAfter.src = images[lightboxIndex];
+        lightboxImgBefore.src = images[lightboxIndex];
+    }
+
+    // Comparison Scroller Logic
+    let isDragging = false;
+
+    if (scroller && comparisonContainer) {
+        // Mouse
+        scroller.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            e.preventDefault(); // Prevent text selection
+        });
+
+        window.addEventListener('mouseup', () => isDragging = false);
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const rect = comparisonContainer.getBoundingClientRect();
+            let x = e.clientX - rect.left;
+            let percent = (x / rect.width) * 100;
+            // Clamp
+            percent = Math.max(0, Math.min(100, percent));
+            comparisonContainer.style.setProperty('--pos', `${percent}%`);
+        });
+
+        // Touch
+        scroller.addEventListener('touchstart', (e) => {
+            isDragging = true;
+            e.preventDefault();
+        });
+
+        window.addEventListener('touchend', () => isDragging = false);
+
+        window.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            const rect = comparisonContainer.getBoundingClientRect();
+            // Use touch clientX
+            let x = e.touches[0].clientX - rect.left;
+            let percent = (x / rect.width) * 100;
+            // Clamp
+            percent = Math.max(0, Math.min(100, percent));
+            comparisonContainer.style.setProperty('--pos', `${percent}%`);
+        });
     }
 
     // Event Listeners for Portfolio Items
@@ -260,6 +312,31 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target === lightbox) {
             closeModal();
         }
+    });
+
+    // FAQ Accordion
+    const faqItems = document.querySelectorAll('.faq-item');
+
+    faqItems.forEach(item => {
+        const question = item.querySelector('.faq-question');
+        question.addEventListener('click', () => {
+            // Close other items
+            faqItems.forEach(otherItem => {
+                if (otherItem !== item && otherItem.classList.contains('active')) {
+                    otherItem.classList.remove('active');
+                    otherItem.querySelector('.faq-answer').style.maxHeight = null;
+                }
+            });
+
+            // Toggle current item
+            item.classList.toggle('active');
+            const answer = item.querySelector('.faq-answer');
+            if (item.classList.contains('active')) {
+                answer.style.maxHeight = answer.scrollHeight + "px";
+            } else {
+                answer.style.maxHeight = null;
+            }
+        });
     });
 
     // Keyboard Navigation

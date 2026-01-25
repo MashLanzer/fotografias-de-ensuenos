@@ -1250,3 +1250,170 @@ body.light-mode .loader-dots span {
         opacity: 1;
     }
 }
+
+/* Lightbox Comparison Slider */
+.comparison-container {
+    position: relative;
+    max-width: 90vw;
+    max-height: 80vh;
+    display: inline-block;
+    /* Wraps around image */
+    overflow: hidden;
+    /* Or visible? */
+    border-radius: 5px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    --pos: 50%;
+}
+
+.lightbox-content.base-img {
+    display: block;
+    max-width: 100%;
+    max-height: 80vh;
+    /* The base image determines dimensions */
+    width: auto;
+    height: auto;
+}
+
+.overlay-img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    overflow: hidden;
+    /* Clip Path handled by JS or CSS variable */
+    clip-path: inset(0 calc(100% - var(--pos)) 0 0);
+    /* Show Left Part */
+}
+
+.overlay-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    /* Must match base img logic? */
+    /* Problem: If base img uses max-height, it retains aspect ratio. 
+       If overlay img is forced 100% w/h, it matches base img perfectly IF base img is filling the div.
+       Since .comparison-container is inline-block and wraps base-img, they match. */
+    filter: grayscale(100%) contrast(0.8) brightness(1.1);
+    /* Simulate Raw/Before */
+}
+
+/* Scroller */
+.scroller {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--pos);
+    width: 4px;
+    background: var(--white);
+    z-index: 10;
+    transform: translateX(-50%);
+    cursor: ew-resize;
+    pointer-events: auto;
+    /* Ensure clickable */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.scroller-icon {
+    width: 30px;
+    height: 30px;
+    background: var(--accent-color);
+    border-radius: 50%;
+    color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.label-before,
+.label-after {
+    position: absolute;
+    top: 20px;
+    padding: 5px 10px;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    font-size: 12px;
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 5;
+    font-family: var(--font-body);
+}
+
+.label-before {
+    left: 20px;
+}
+
+.label-after {
+    right: 20px;
+}
+
+/* FAQ Section */
+.faq-grid {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.faq-item {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 10px;
+}
+
+.faq-question {
+    padding: 20px 0;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.faq-question h3 {
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: var(--white);
+    margin: 0;
+}
+
+.faq-icon i {
+    transition: transform 0.3s ease;
+    color: var(--accent-color);
+}
+
+.faq-answer {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease;
+    padding-right: 20px;
+}
+
+.faq-answer p {
+    padding-bottom: 20px;
+    line-height: 1.6;
+    color: #ccc;
+}
+
+body.light-mode .faq-question h3 {
+    color: #333;
+}
+
+body.light-mode .faq-answer p {
+    color: #666;
+}
+
+body.light-mode .faq-item {
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Active State */
+.faq-item.active .faq-icon i {
+    transform: rotate(45deg);
+    /* Make it an X */
+}
+
+.label-after {
+    right: 20px;
+}
