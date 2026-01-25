@@ -1417,3 +1417,65 @@ body.light-mode .faq-item {
 .label-after {
     right: 20px;
 }
+
+/* Contact & Compact FAQ Integration */
+.contact-wrapper {
+    display: flex;
+    gap: 50px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.contact-info {
+    flex: 1;
+    min-width: 300px;
+}
+
+.contact-form-container {
+    flex: 1.2;
+    min-width: 300px;
+}
+
+/* Compact FAQ Styling */
+.faq-compact-container {
+    margin-top: 40px;
+    padding-top: 30px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.faq-title-mini {
+    font-size: 1.1rem;
+    color: var(--accent-color);
+    margin-bottom: 20px;
+    font-family: var(--font-heading);
+    letter-spacing: 1px;
+}
+
+/* Compact Overrides */
+.faq-grid.compact .faq-item {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.faq-grid.compact .faq-question {
+    padding: 12px 0;
+}
+
+.faq-grid.compact .faq-question h3 {
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.faq-grid.compact .faq-answer p {
+    font-size: 0.9rem;
+    padding-bottom: 15px;
+    color: #aaa;
+}
+
+/* Light mode adjustments for Sidebar */
+body.light-mode .faq-compact-container {
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+body.light-mode .faq-grid.compact .faq-item {
+    border-color: rgba(0, 0, 0, 0.05);
+}
