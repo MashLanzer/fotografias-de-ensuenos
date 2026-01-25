@@ -19,26 +19,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Testimonial Slider
     const slides = document.querySelectorAll('.testimonial-slide');
+    const dots = document.querySelectorAll('.dot');
+    const testimonialContainer = document.querySelector('.testimonial-slider');
     let currentSlide = 0;
-    const slideInterval = 7000; // Change slide every 7 seconds
+    const slideInterval = 7000;
+    let slideTimer;
 
-    function nextSlide() {
-        slides[currentSlide].classList.remove('active');
-        currentSlide = (currentSlide + 1) % slides.length;
-        slides[currentSlide].classList.add('active');
+    function showSlide(n) {
+        // Handle potential safety checks
+        if (slides[currentSlide]) slides[currentSlide].classList.remove('active');
+        if (dots[currentSlide]) dots[currentSlide].classList.remove('active');
+
+        currentSlide = (n + slides.length) % slides.length;
+
+        if (slides[currentSlide]) slides[currentSlide].classList.add('active');
+        if (dots[currentSlide]) dots[currentSlide].classList.add('active');
     }
 
-    let slideTimer = setInterval(nextSlide, slideInterval);
+    function nextSlide() {
+        showSlide(currentSlide + 1);
+    }
 
-    // Pause slider on hover (optional interaction)
-    const testimonialContainer = document.querySelector('.testimonial-slider');
-    testimonialContainer.addEventListener('mouseenter', () => {
-        clearInterval(slideTimer);
-    });
-
-    testimonialContainer.addEventListener('mouseleave', () => {
+    function startSlideTimer() {
+        if (slideTimer) clearInterval(slideTimer);
         slideTimer = setInterval(nextSlide, slideInterval);
+    }
+
+    function stopSlideTimer() {
+        if (slideTimer) clearInterval(slideTimer);
+    }
+
+    // Event listeners for dots
+    dots.forEach((dot, index) => {
+        dot.addEventListener('click', () => {
+            stopSlideTimer();
+            showSlide(index);
+            startSlideTimer(); // Restart timer
+        });
     });
+
+    // Pause on hover
+    if (testimonialContainer) {
+        testimonialContainer.addEventListener('mouseenter', stopSlideTimer);
+        testimonialContainer.addEventListener('mouseleave', startSlideTimer);
+    }
+
+    // Start auto slider
+    startSlideTimer();
 
     // Navbar Scroll Effect (Change background on scroll)
     const navbar = document.querySelector('.navbar');
