@@ -17,27 +17,50 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Testimonial Slider
+    // Testimonial Carousel
+    const track = document.querySelector('.testimonial-track');
     const slides = document.querySelectorAll('.testimonial-slide');
     const dots = document.querySelectorAll('.dot');
     const testimonialContainer = document.querySelector('.testimonial-slider');
-    let currentSlide = 0;
-    const slideInterval = 7000;
+    let currentIndex = 0;
+    const slideInterval = 5000;
     let slideTimer;
 
-    function showSlide(n) {
-        // Handle potential safety checks
-        if (slides[currentSlide]) slides[currentSlide].classList.remove('active');
-        if (dots[currentSlide]) dots[currentSlide].classList.remove('active');
+    function getVisibleSlides() {
+        if (window.innerWidth <= 768) return 1;
+        if (window.innerWidth <= 992) return 2;
+        return 3;
+    }
 
-        currentSlide = (n + slides.length) % slides.length;
+    function updateCarousel() {
+        const visibleSlides = getVisibleSlides();
+        const maxIndex = slides.length - visibleSlides; // Prevent whitespace at end
 
-        if (slides[currentSlide]) slides[currentSlide].classList.add('active');
-        if (dots[currentSlide]) dots[currentSlide].classList.add('active');
+        // Ensure index is valid
+        if (currentIndex > maxIndex) currentIndex = 0;
+        if (currentIndex < 0) currentIndex = maxIndex;
+
+        // Move track
+        const movePercent = currentIndex * (100 / visibleSlides);
+        track.style.transform = `translateX(-${movePercent}%)`;
+
+        // Update Dots
+        dots.forEach(d => d.classList.remove('active'));
+        // If checking maxIndex, we might map multiple dots to same position? 
+        // Let's just highlight the current start index dot.
+        if (dots[currentIndex]) dots[currentIndex].classList.add('active');
     }
 
     function nextSlide() {
-        showSlide(currentSlide + 1);
+        const visibleSlides = getVisibleSlides();
+        const maxIndex = slides.length - visibleSlides;
+
+        if (currentIndex >= maxIndex) {
+            currentIndex = 0;
+        } else {
+            currentIndex++;
+        }
+        updateCarousel();
     }
 
     function startSlideTimer() {
@@ -53,9 +76,19 @@ document.addEventListener('DOMContentLoaded', () => {
     dots.forEach((dot, index) => {
         dot.addEventListener('click', () => {
             stopSlideTimer();
-            showSlide(index);
-            startSlideTimer(); // Restart timer
+            // Handle edge case: if checking dot > maxIndex
+            const visibleSlides = getVisibleSlides();
+            const maxIndex = slides.length - visibleSlides;
+            currentIndex = Math.min(index, maxIndex);
+
+            updateCarousel();
+            startSlideTimer();
         });
+    });
+
+    // Resize listener
+    window.addEventListener('resize', () => {
+        updateCarousel(); // Re-clamp and re-position
     });
 
     // Pause on hover
@@ -66,6 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Start auto slider
     startSlideTimer();
+    updateCarousel(); // Initial set
 
     // Navbar Scroll Effect (Change background on scroll)
     const navbar = document.querySelector('.navbar');
@@ -170,12 +204,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const nextBtn = document.querySelector('.next');
     const portfolioItems = document.querySelectorAll('.portfolio-item img');
 
-    let currentIndex = 0;
+    let lightboxIndex = 0;
     const images = Array.from(portfolioItems).map(img => img.src);
 
     function openLightbox(index) {
-        currentIndex = index;
-        lightboxImg.src = images[currentIndex];
+        lightboxIndex = index;
+        lightboxImg.src = images[lightboxIndex];
         lightbox.classList.add('active');
         document.body.style.overflow = 'hidden'; // Stop scrolling
     }
@@ -186,13 +220,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showImage(n) {
-        currentIndex += n;
-        if (currentIndex >= images.length) {
-            currentIndex = 0;
-        } else if (currentIndex < 0) {
-            currentIndex = images.length - 1;
+        lightboxIndex += n;
+        if (lightboxIndex >= images.length) {
+            lightboxIndex = 0;
+        } else if (lightboxIndex < 0) {
+            lightboxIndex = images.length - 1;
         }
-        lightboxImg.src = images[currentIndex];
+        lightboxImg.src = images[lightboxIndex];
     }
 
     // Event Listeners for Portfolio Items
