@@ -131,6 +131,20 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.href = mailtoLink;
         });
     }
+    // Animated Typography (Letter Split)
+    const sectionTitles = document.querySelectorAll('.section-title');
+    sectionTitles.forEach(title => {
+        const text = title.textContent.trim();
+        title.innerHTML = '';
+        text.split('').forEach((char, index) => {
+            const span = document.createElement('span');
+            span.textContent = char === ' ' ? '\u00A0' : char;
+            span.classList.add('char');
+            span.style.setProperty('--i', index);
+            title.appendChild(span);
+        });
+    });
+
     // Scroll Animation Observer
     const observer = new IntersectionObserver((entries) => {
         entries.forEach((entry) => {
