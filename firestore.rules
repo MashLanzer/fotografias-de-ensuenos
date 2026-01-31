@@ -1,0 +1,43 @@
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Public gallery collection: allow reads for everyone.
+    // Allow creates/updates only when the document contains a valid structure
+    // and allow deletes (so dashboard can clear old entries).
+    match /imagenes/{docId} {
+      allow read: if true;
+
+      allow create, update: if
+        request.resource.data.url is string
+        && request.resource.data.url.size() > 0
+        && (request.resource.data.category is string);
+
+      allow delete: if true;
+    }
+
+    // Gallery metadata used by the dashboard. Allow clients to create/update
+    // entries that include expected fields (title, rotation, layout or src).
+    match /galeria/{docId} {
+      allow read: if true;
+
+      allow create: if
+        request.resource.data.title is string
+        && (request.resource.data.rotation is number || request.resource.data.rotation is int)
+        && request.resource.data.layout is string
+        && (request.resource.data.src is string || request.resource.data.previewId is string || true);
+
+      allow update: if
+        request.resource.data.title is string
+        && (request.resource.data.rotation is number || request.resource.data.rotation is int)
+        && request.resource.data.layout is string;
+
+      allow delete: if true;
+    }
+
+    // Deny writes to other collections from the client by default.
+    match /{document=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}

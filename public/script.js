@@ -1,21 +1,179 @@
+// Expose these flags/globals at module scope so code defined outside
+// the DOMContentLoaded handler can access them (cargarGaleria, etc.).
+var firebaseEnabled = false;
+var IMGBB_KEY = window.IMGBB_KEY || null;
+
+// Module-scope helpers so code outside DOMContentLoaded can use them.
+async function subirImagenImgBB(file) {
+    // Prefer server-side upload if available (keeps API key secret)
+    const serverUrl = window.IMGBB_SERVER_URL || null;
+    if (serverUrl) {
+        const base64 = await new Promise((res, rej) => {
+            const r = new FileReader();
+            r.onload = () => res(r.result);
+            r.onerror = (err) => rej(err);
+            r.readAsDataURL(file);
+        });
+        const resp = await fetch(`${serverUrl.replace(/\/$/, '')}/imgbb/upload`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imageBase64: base64 })
+        });
+        const data = await resp.json();
+        if (!data || !data.url) throw new Error('Server imgbb upload failed');
+        return { url: data.url, deleteUrl: data.deleteUrl || null };
+    }
+
+    // Fallback to direct client-side Imgbb upload
+    const key = (typeof IMGBB_KEY !== 'undefined' ? IMGBB_KEY : window.IMGBB_KEY) || '';
+    if (!key) throw new Error('IMGBB API key not configured');
+    const form = new FormData();
+    form.append('image', file);
+    try {
+        const res = await fetch(`https://api.imgbb.com/1/upload?key=${encodeURIComponent(key)}`, {
+            method: 'POST',
+            body: form
+        });
+        const data = await res.json();
+        if (!data || !data.data || !data.data.url) throw new Error('Invalid imgbb response');
+        return { url: data.data.url, deleteUrl: data.data.delete_url || data.data.deleteUrl || null };
+    } catch (e) {
+        console.error('ImgBB upload failed', e);
+        throw e;
+    }
+}
+
+async function clearExistingImages() {
+    try {
+        if (typeof firebase !== 'undefined' && firebase.firestore) {
+            const db = firebase.firestore();
+            const coll = db.collection('imagenes');
+            const snapshot = await coll.get();
+            if (snapshot && snapshot.docs && snapshot.docs.length) {
+                const batch = db.batch();
+                for (const d of snapshot.docs) {
+                    const data = d.data && d.data();
+                    const del = data && (data.deleteUrl || data.delete_url);
+                    if (del) {
+                        try { fetch(del).catch(() => {}); } catch (e) { console.warn('ImgBB delete call failed', e); }
+                    }
+                    batch.delete(d.ref);
+                }
+                await batch.commit();
+                console.info('Cleared existing Firestore docs in `imagenes`.');
+            }
+        }
+    } catch (e) {
+        console.warn('Failed clearing Firestore imagenes', e);
+    }
+
+    // NOTE: We intentionally do NOT interact with external file storage here.
+    // Images are uploaded to Imgbb and metadata is stored in Firestore.
+    try {
+        console.info('Skipping any Firebase Storage operations; using Imgbb + Firestore.');
+    } catch (e) {
+        /* no-op */
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    // Mobile Navigation Toggle
+    // --- Firebase configuration (EDIT: paste your Firebase project config here) ---
+    // Example:
+    // const FIREBASE_CONFIG = {
+    //   apiKey: "...",
+    //   authDomain: "your-project.firebaseapp.com",
+    //   projectId: "your-project",
+    //   messagingSenderId: "...",
+    //   appId: "..."
+    // };
+    const FIREBASE_CONFIG = window.FIREBASE_CONFIG || null; // allow overriding via global
+    firebaseEnabled = false;
+    if (typeof firebase !== 'undefined' && FIREBASE_CONFIG) {
+        try {
+            if (!firebase.apps || !firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+            firebaseEnabled = true;
+            console.info('Firebase initialized');
+        } catch (e) {
+            console.warn('Firebase init failed', e);
+            firebaseEnabled = false;
+        }
+    }
+    // --- IMGBB key (optional) ---
+    IMGBB_KEY = window.IMGBB_KEY || null;
+
+    // Detect Firestore accessibility and update UI.
+    async function checkFirebaseAccess() {
+        const statusBoxEl = document.getElementById('statusBox');
+        const modeEl = document.getElementById('uploadModeSelect');
+        let fsOk = false;
+        try {
+            if (typeof firebase !== 'undefined' && firebase.firestore) {
+                // lightweight read to verify access (limit 1)
+                const snapshot = await firebase.firestore().collection('imagenes').limit(1).get();
+                fsOk = !!(snapshot && snapshot.size >= 0);
+            }
+        } catch (e) {
+            console.warn('Firestore access check failed', e);
+            fsOk = false;
+        }
+
+        // Update UI
+        if (statusBoxEl) {
+            if (fsOk) statusBoxEl.innerText = 'Firestore OK';
+            else statusBoxEl.innerText = 'Firestore inaccesible — usando Imgbb/local';
+        }
+
+        // If Firestore is not available but Imgbb is configured, prefer Imgbb mode.
+        try {
+            if (!fsOk && (IMGBB_KEY || (window.IMGBB_SERVER_URL || null)) && modeEl) {
+                try { modeEl.value = 'imgbb'; } catch (e) { /* ignore */ }
+                const existing = document.getElementById('firebase-warning-banner');
+                if (!existing) {
+                    const banner = document.createElement('div');
+                    banner.id = 'firebase-warning-banner';
+                    banner.style.position = 'fixed';
+                    banner.style.top = '0';
+                    banner.style.left = '0';
+                    banner.style.right = '0';
+                    banner.style.background = '#ffefc2';
+                    banner.style.color = '#333';
+                    banner.style.padding = '12px 16px';
+                    banner.style.zIndex = '9999';
+                    banner.style.boxShadow = '0 2px 4px rgba(0,0,0,0.08)';
+                    banner.innerHTML = `<strong>Atención:</strong> Firestore parece inaccesible. Se usará Imgbb para subir imágenes. <button id="dismissFirebaseBanner" style="margin-left:12px;padding:6px 10px;">Descartar</button>`;
+                    document.body.appendChild(banner);
+                    document.getElementById('dismissFirebaseBanner').addEventListener('click', () => banner.remove());
+                }
+            } else {
+                const existing = document.getElementById('firebase-warning-banner');
+                if (existing) existing.remove();
+            }
+        } catch (e) {
+            /* ignore banner errors */
+        }
+    }
+
+    // Run quick access check after init
+    checkFirebaseAccess().catch(() => {});
+
+    // subirImagenImgBB and clearExistingImages are defined at module scope
+    // so they can be used by upload logic declared later in the file.
+    // --- Solo ejecutar si existen los elementos principales de navegación ---
     const hamburger = document.querySelector('.hamburger');
     const navLinks = document.querySelector('.nav-links');
     const links = document.querySelectorAll('.nav-links li');
-
-    hamburger.addEventListener('click', () => {
-        navLinks.classList.toggle('active');
-        hamburger.classList.toggle('toggle');
-    });
-
-    // Close mobile menu when a link is clicked
-    links.forEach(link => {
-        link.addEventListener('click', () => {
-            navLinks.classList.remove('active');
-            hamburger.classList.remove('toggle');
+    if (hamburger && navLinks && links.length) {
+        hamburger.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+            hamburger.classList.toggle('toggle');
         });
-    });
+        links.forEach(link => {
+            link.addEventListener('click', () => {
+                navLinks.classList.remove('active');
+                hamburger.classList.remove('toggle');
+            });
+        });
+    }
 
     // Testimonial Carousel
     const track = document.querySelector('.testimonial-track');
@@ -33,28 +191,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateCarousel() {
+        if (!track || !slides.length) return;
         const visibleSlides = getVisibleSlides();
-        const maxIndex = slides.length - visibleSlides; // Prevent whitespace at end
-
-        // Ensure index is valid
+        const maxIndex = slides.length - visibleSlides;
         if (currentIndex > maxIndex) currentIndex = 0;
         if (currentIndex < 0) currentIndex = maxIndex;
-
-        // Move track
         const movePercent = currentIndex * (100 / visibleSlides);
-        track.style.transform = `translateX(-${movePercent}%)`;
-
-        // Update Dots
-        dots.forEach(d => d.classList.remove('active'));
-        // If checking maxIndex, we might map multiple dots to same position? 
-        // Let's just highlight the current start index dot.
-        if (dots[currentIndex]) dots[currentIndex].classList.add('active');
+        if (track && track.style) track.style.transform = `translateX(-${movePercent}%)`;
+        if (dots.length) {
+            dots.forEach(d => d.classList.remove('active'));
+            if (dots[currentIndex]) dots[currentIndex].classList.add('active');
+        }
     }
 
     function nextSlide() {
+        if (!slides.length) return;
         const visibleSlides = getVisibleSlides();
         const maxIndex = slides.length - visibleSlides;
-
         if (currentIndex >= maxIndex) {
             currentIndex = 0;
         } else {
@@ -64,6 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function startSlideTimer() {
+        if (!slides.length) return;
         if (slideTimer) clearInterval(slideTimer);
         slideTimer = setInterval(nextSlide, slideInterval);
     }
@@ -72,45 +226,45 @@ document.addEventListener('DOMContentLoaded', () => {
         if (slideTimer) clearInterval(slideTimer);
     }
 
-    // Event listeners for dots
-    dots.forEach((dot, index) => {
-        dot.addEventListener('click', () => {
-            stopSlideTimer();
-            // Handle edge case: if checking dot > maxIndex
-            const visibleSlides = getVisibleSlides();
-            const maxIndex = slides.length - visibleSlides;
-            currentIndex = Math.min(index, maxIndex);
-
-            updateCarousel();
-            startSlideTimer();
+    if (dots.length) {
+        dots.forEach((dot, index) => {
+            dot.addEventListener('click', () => {
+                stopSlideTimer();
+                const visibleSlides = getVisibleSlides();
+                const maxIndex = slides.length - visibleSlides;
+                currentIndex = Math.min(index, maxIndex);
+                updateCarousel();
+                startSlideTimer();
+            });
         });
-    });
+    }
 
-    // Resize listener
     window.addEventListener('resize', () => {
-        updateCarousel(); // Re-clamp and re-position
+        updateCarousel();
     });
 
-    // Pause on hover
     if (testimonialContainer) {
         testimonialContainer.addEventListener('mouseenter', stopSlideTimer);
         testimonialContainer.addEventListener('mouseleave', startSlideTimer);
     }
 
-    // Start auto slider
-    startSlideTimer();
-    updateCarousel(); // Initial set
+    if (slides.length) {
+        startSlideTimer();
+        updateCarousel(); // Initial set
+    }
 
     // Navbar Scroll Effect (Change background on scroll)
     const navbar = document.querySelector('.navbar');
 
-    window.addEventListener('scroll', () => {
-        if (window.scrollY > 50) {
-            navbar.classList.add('scrolled');
-        } else {
-            navbar.classList.remove('scrolled');
-        }
-    });
+    if (navbar) {
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+    }
 
     // Contact Form Handling (Mailto)
     const contactForm = document.querySelector('.contact-form');
@@ -162,53 +316,56 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Theme Toggle ---
     const themeToggle = document.querySelector('.theme-toggle');
     const body = document.body;
-    const themeIcon = themeToggle.querySelector('i');
+    let themeIcon = null;
+    if (themeToggle) themeIcon = themeToggle.querySelector('i');
 
     // Check for saved theme preference
     const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'light') {
+    if (themeToggle && themeIcon && savedTheme === 'light') {
         body.classList.add('light-mode');
         themeIcon.classList.remove('fa-moon');
         themeIcon.classList.add('fa-sun');
     }
 
-    themeToggle.addEventListener('click', () => {
-        body.classList.toggle('light-mode');
-        // Toggle icon
-        if (body.classList.contains('light-mode')) {
-            themeIcon.classList.remove('fa-moon');
-            themeIcon.classList.add('fa-sun');
-            localStorage.setItem('theme', 'light');
-        } else {
-            themeIcon.classList.remove('fa-sun');
-            themeIcon.classList.add('fa-moon');
-            localStorage.setItem('theme', 'dark');
-        }
-    });
+    if (themeToggle && themeIcon) {
+        themeToggle.addEventListener('click', () => {
+            body.classList.toggle('light-mode');
+            // Toggle icon
+            if (body.classList.contains('light-mode')) {
+                themeIcon.classList.remove('fa-moon');
+                themeIcon.classList.add('fa-sun');
+                localStorage.setItem('theme', 'light');
+            } else {
+                themeIcon.classList.remove('fa-sun');
+                themeIcon.classList.add('fa-moon');
+                localStorage.setItem('theme', 'dark');
+            }
+        });
+    }
 
     // --- Portfolio Filtering ---
     const filterBtns = document.querySelectorAll('.filter-btn');
-    const portfolioItemsEl = document.querySelectorAll('.portfolio-item');
-
-    filterBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            // Remove active class
-            filterBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-
-            const filterValue = btn.getAttribute('data-filter');
-
-            portfolioItemsEl.forEach(item => {
-                if (filterValue === 'all' || item.getAttribute('data-category') === filterValue) {
-                    item.classList.remove('hide');
-                    item.classList.add('show');
-                } else {
-                    item.classList.remove('show');
-                    item.classList.add('hide');
-                }
+    if (filterBtns.length) {
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const filterValue = btn.getAttribute('data-filter');
+                // Query current items dynamically (supports items rendered after load)
+                const currentItems = document.querySelectorAll('.portfolio-item');
+                currentItems.forEach(item => {
+                    const cat = item.getAttribute('data-category') || 'sin categoría';
+                    if (filterValue === 'all' || cat === filterValue) {
+                        item.classList.remove('hide');
+                        item.classList.add('show');
+                    } else {
+                        item.classList.remove('show');
+                        item.classList.add('hide');
+                    }
+                });
             });
         });
-    });
+    }
 
     // --- Lightbox Gallery ---
     const lightbox = document.getElementById('lightbox');
@@ -216,45 +373,72 @@ document.addEventListener('DOMContentLoaded', () => {
     const lightboxImgBefore = document.getElementById('lightbox-img-before');
     const comparisonContainer = document.querySelector('.comparison-container');
     const scroller = document.getElementById('scroller');
+    // shared dragging state for comparison scroller
+    let isDragging = false;
+    if (lightbox && lightbox.style) {
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox) {
+                lightbox.classList.remove('active');
+                document.body.style.overflow = 'auto';
+            }
+        });
+    }
 
     const closeBtn = document.querySelector('.close-lightbox');
     const prevBtn = document.querySelector('.prev');
     const nextBtn = document.querySelector('.next');
     const portfolioItems = document.querySelectorAll('.portfolio-item img');
 
-    let lightboxIndex = 0;
-    const images = Array.from(portfolioItems).map(img => img.src);
+    // Only initialize lightbox behavior if all required elements exist
+    if (lightbox && lightboxImgAfter && lightboxImgBefore && portfolioItems.length) {
+        let lightboxIndex = 0;
+        const images = Array.from(portfolioItems).map(img => img.src);
 
-    function openLightbox(index) {
-        lightboxIndex = index;
-        lightboxImgAfter.src = images[lightboxIndex];
-        lightboxImgBefore.src = images[lightboxIndex];
+        function openLightbox(index) {
+            lightboxIndex = index;
+            lightboxImgAfter.src = images[lightboxIndex];
+            lightboxImgBefore.src = images[lightboxIndex];
 
-        // Reset slider
-        if (comparisonContainer) comparisonContainer.style.setProperty('--pos', '50%');
+            if (comparisonContainer && comparisonContainer.style) comparisonContainer.style.setProperty('--pos', '50%');
 
-        lightbox.classList.add('active');
-        document.body.style.overflow = 'hidden';
-    }
-
-    function closeModal() {
-        lightbox.classList.remove('active');
-        document.body.style.overflow = 'auto';
-    }
-
-    function showImage(n) {
-        lightboxIndex += n;
-        if (lightboxIndex >= images.length) {
-            lightboxIndex = 0;
-        } else if (lightboxIndex < 0) {
-            lightboxIndex = images.length - 1;
+            lightbox.classList.add('active');
+            document.body.style.overflow = 'hidden';
         }
-        lightboxImgAfter.src = images[lightboxIndex];
-        lightboxImgBefore.src = images[lightboxIndex];
-    }
 
-    // Comparison Scroller Logic
-    let isDragging = false;
+        function closeModal() {
+            lightbox.classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+
+        function showImage(n) {
+            lightboxIndex += n;
+            if (lightboxIndex >= images.length) {
+                lightboxIndex = 0;
+            } else if (lightboxIndex < 0) {
+                lightboxIndex = images.length - 1;
+            }
+            lightboxImgAfter.src = images[lightboxIndex];
+            lightboxImgBefore.src = images[lightboxIndex];
+        }
+
+        // Comparison Scroller Logic
+
+        // Event Listeners for Portfolio Items
+        if (typeof portfolioItems !== 'undefined' && portfolioItems.length) {
+            portfolioItems.forEach((item, index) => {
+                if (item.parentElement) {
+                    item.parentElement.addEventListener('click', () => {
+                        openLightbox(index);
+                    });
+                }
+            });
+        }
+
+        // Event Listeners for Controls
+        if (closeBtn) closeBtn.addEventListener('click', closeModal);
+        if (prevBtn) prevBtn.addEventListener('click', () => showImage(-1));
+        if (nextBtn) nextBtn.addEventListener('click', () => showImage(1));
+    }
 
     if (scroller && comparisonContainer) {
         // Mouse
@@ -296,48 +480,46 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Event Listeners for Portfolio Items
-    portfolioItems.forEach((item, index) => {
-        item.parentElement.addEventListener('click', () => {
-            openLightbox(index);
+    if (typeof portfolioItems !== 'undefined' && portfolioItems.length) {
+        portfolioItems.forEach((item, index) => {
+            if (item.parentElement) {
+                item.parentElement.addEventListener('click', () => {
+                    openLightbox(index);
+                });
+            }
         });
-    });
+    }
 
     // Event Listeners for Controls
-    closeBtn.addEventListener('click', closeModal);
-    prevBtn.addEventListener('click', () => showImage(-1));
-    nextBtn.addEventListener('click', () => showImage(1));
-
-    // Close on outside click
-    lightbox.addEventListener('click', (e) => {
-        if (e.target === lightbox) {
-            closeModal();
-        }
-    });
+    if (typeof closeBtn !== 'undefined' && closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (typeof prevBtn !== 'undefined' && prevBtn) prevBtn.addEventListener('click', () => showImage(-1));
+    if (typeof nextBtn !== 'undefined' && nextBtn) nextBtn.addEventListener('click', () => showImage(1));
 
     // FAQ Accordion
     const faqItems = document.querySelectorAll('.faq-item');
-
-    faqItems.forEach(item => {
-        const question = item.querySelector('.faq-question');
-        question.addEventListener('click', () => {
-            // Close other items
-            faqItems.forEach(otherItem => {
-                if (otherItem !== item && otherItem.classList.contains('active')) {
-                    otherItem.classList.remove('active');
-                    otherItem.querySelector('.faq-answer').style.maxHeight = null;
-                }
-            });
-
-            // Toggle current item
-            item.classList.toggle('active');
+    if (faqItems.length) {
+        faqItems.forEach(item => {
+            const question = item.querySelector('.faq-question');
             const answer = item.querySelector('.faq-answer');
-            if (item.classList.contains('active')) {
-                answer.style.maxHeight = answer.scrollHeight + "px";
-            } else {
-                answer.style.maxHeight = null;
+            if (question && answer) {
+                question.addEventListener('click', () => {
+                    faqItems.forEach(otherItem => {
+                        if (otherItem !== item && otherItem.classList.contains('active')) {
+                            otherItem.classList.remove('active');
+                            const otherAnswer = otherItem.querySelector('.faq-answer');
+                            if (otherAnswer && otherAnswer.style) otherAnswer.style.maxHeight = null;
+                        }
+                    });
+                    item.classList.toggle('active');
+                    if (item.classList.contains('active')) {
+                        if (answer && answer.style) answer.style.maxHeight = answer.scrollHeight + "px";
+                    } else {
+                        if (answer && answer.style) answer.style.maxHeight = null;
+                    }
+                });
             }
         });
-    });
+    }
 
     // Keyboard Navigation
     document.addEventListener('keydown', (e) => {
@@ -507,6 +689,332 @@ document.addEventListener('DOMContentLoaded', () => {
 // Preloader Logic
 window.addEventListener('load', () => {
     const preloader = document.getElementById('preloader');
-    preloader.style.opacity = '0';
-    preloader.style.visibility = 'hidden';
+    if (preloader && preloader.style) {
+        preloader.style.opacity = '0';
+        preloader.style.visibility = 'hidden';
+    }
 });
+
+// --- DASHBOARD GALERÍA DE SUEÑOS con SUPABASE y VISTA PREVIA REAL ---
+// Lightweight dashboard preview (runs even if Supabase SDK failed to load)
+{
+    const dashboardImageFilesInput = document.getElementById('imageFiles');
+    const dashboardPreviewDiv = document.getElementById('preview');
+    const dashboardMaxImagesInput = document.getElementById('maxImages');
+    const dashboardGalleryPreview = document.getElementById('dashboard-gallery-preview');
+    let dashboardSelectedFiles = []; // will hold objects: {id, file, src, category}
+
+    function createCategorySelect(selected) {
+        const sel = document.createElement('select');
+        sel.className = 'category-select';
+        const opts = ['sin categoría', 'retrato', 'paisaje', 'abstracto', 'otros'];
+        opts.forEach(o => {
+            const option = document.createElement('option');
+            option.value = o;
+            option.innerText = o;
+            if (o === selected) option.selected = true;
+            sel.appendChild(option);
+        });
+        return sel;
+    }
+
+    // Drag & Drop helpers for manual ordering
+    function enableDragAndDrop(container) {
+        let dragEl = null;
+        container.addEventListener('dragstart', (e) => {
+            dragEl = e.target;
+            dragEl.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        });
+        container.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            const afterEl = getDragAfterElement(container, e.clientY);
+            const draggingEl = dragEl;
+            if (!draggingEl) return;
+            if (afterEl == null) container.appendChild(draggingEl);
+            else container.insertBefore(draggingEl, afterEl);
+        });
+        container.addEventListener('dragend', () => { if (dragEl) dragEl.classList.remove('dragging'); dragEl = null; });
+    }
+
+    function getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('.preview-item:not(.dragging)')];
+        let closest = { offset: Number.NEGATIVE_INFINITY, element: null };
+        draggableElements.forEach(child => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                closest = { offset: offset, element: child };
+            }
+        });
+        return closest.element;
+    }
+
+    function renderPreviewDashboard() {
+        if (!dashboardPreviewDiv || !dashboardGalleryPreview) return;
+        dashboardPreviewDiv.innerHTML = '';
+        dashboardGalleryPreview.innerHTML = '';
+        const max = parseInt(dashboardMaxImagesInput && dashboardMaxImagesInput.value, 10) || dashboardSelectedFiles.length;
+        const filesToShow = dashboardSelectedFiles.slice(0, max);
+        filesToShow.forEach((it, idx) => {
+            // mini preview
+            const mini = document.createElement('img');
+            mini.src = it.src;
+            mini.style.maxWidth = '120px';
+            mini.style.margin = '8px';
+            dashboardPreviewDiv.appendChild(mini);
+
+            // gallery preview item with drag & category
+            const item = document.createElement('div');
+            item.className = 'portfolio-item preview-item';
+            item.setAttribute('draggable', 'true');
+            item.dataset.id = it.id;
+            if (filesToShow.length > 2 && idx % 3 === 0) item.classList.add('wide');
+            if (filesToShow.length > 2 && idx % 4 === 1) item.classList.add('tall');
+            const gimg = document.createElement('img');
+            gimg.src = it.src;
+            gimg.alt = 'Galería de Sueños';
+            const overlay = document.createElement('div');
+            overlay.className = 'overlay-info';
+            overlay.innerHTML = `<h4>Galería Sueños</h4><p>Sueños</p>`;
+            const cat = createCategorySelect(it.category || 'sin categoría');
+            cat.addEventListener('change', (e) => {
+                const id = item.dataset.id;
+                const obj = dashboardSelectedFiles.find(x => x.id === id);
+                if (obj) obj.category = e.target.value;
+            });
+            item.appendChild(gimg);
+            item.appendChild(overlay);
+            item.appendChild(cat);
+            dashboardGalleryPreview.appendChild(item);
+        });
+        enableDragAndDrop(dashboardGalleryPreview);
+    }
+
+    if (dashboardImageFilesInput) {
+        dashboardImageFilesInput.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files || []);
+            const now = Date.now();
+            const readers = files.map((file, i) => new Promise((res) => {
+                const r = new FileReader();
+                r.onload = (ev) => res({ id: `${now}_${i}`, file, src: ev.target.result, category: 'sin categoría' });
+                r.readAsDataURL(file);
+            }));
+            Promise.all(readers).then(results => {
+                dashboardSelectedFiles = results;
+                renderPreviewDashboard();
+            });
+        });
+    }
+
+    if (dashboardMaxImagesInput) dashboardMaxImagesInput.addEventListener('input', renderPreviewDashboard);
+
+    // Export JSON fallback
+    const exportBtn = document.getElementById('exportJsonBtn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => {
+            const items = [...(dashboardGalleryPreview.querySelectorAll('.preview-item'))].map((el, idx) => {
+                const id = el.dataset.id;
+                const obj = dashboardSelectedFiles.find(x => x.id === id) || {};
+                return { order: idx, category: obj.category || 'sin categoría', preview: obj.src };
+            });
+            const blob = new Blob([JSON.stringify(items, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'galeria_export.json';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        });
+    }
+
+    // Global upload handler (works with or without Supabase SDK)
+    const uploadFormGlobal = document.getElementById('uploadForm');
+    if (uploadFormGlobal) {
+        uploadFormGlobal.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const maxEl = (typeof dashboardMaxImagesInput !== 'undefined' && dashboardMaxImagesInput) ? dashboardMaxImagesInput : document.getElementById('maxImages');
+            const max = parseInt((maxEl && maxEl.value) || '', 10) || ((dashboardSelectedFiles && dashboardSelectedFiles.length) ? dashboardSelectedFiles.length : (typeof selectedFiles !== 'undefined' ? selectedFiles.length : 0));
+            // Pass structured items (prefer dashboardSelectedFiles which include category)
+            const items = (dashboardSelectedFiles && dashboardSelectedFiles.length) ? dashboardSelectedFiles.slice(0, max) : (typeof selectedFiles !== 'undefined' ? (selectedFiles || []).slice(0, max).map(f => ({ file: f, category: 'sin categoría' })) : []);
+            if (!items || items.length === 0) {
+                alert('No hay imágenes seleccionadas para subir.');
+                return;
+            }
+            if (statusBox) statusBox.innerText = 'Iniciando subida...';
+            await performUpload(items, max);
+        });
+    }
+
+    async function performUpload(items, max) {
+        const statusBox = document.getElementById('statusBox');
+        const modeEl = document.getElementById('uploadModeSelect');
+        const uploadMode = modeEl ? modeEl.value : 'auto';
+        const imgbbPreferred = (uploadMode === 'imgbb') || (uploadMode === 'auto' && (IMGBB_KEY || (window.IMGBB_SERVER_URL || null)));
+
+        if (uploadMode === 'local') {
+            if (statusBox) statusBox.innerText = 'Modo local: usar Exportar JSON';
+            alert('Modo local seleccionado. Usa "Exportar JSON" para obtener galeria_export.json y súbelo manualmente.');
+            return;
+        }
+
+        try {
+            // Attempt to clear previous Firestore documents (no external storage interaction)
+            try { await clearExistingImages(); } catch (e) { console.warn('clearExistingImages failed', e); }
+
+            if (imgbbPreferred) {
+                if (!(IMGBB_KEY || (window.IMGBB_SERVER_URL || null))) throw new Error('ImgBB no está configurado (sin servidor o clave cliente)');
+                if (typeof firebase === 'undefined' || !firebase.firestore) throw new Error('Firestore no disponible');
+                const db = firebase.firestore();
+                const coll = db.collection('imagenes');
+                const batch = db.batch();
+                for (const it of items) {
+                    const file = it.file || it;
+                    const imgbbRes = await subirImagenImgBB(file);
+                    const url = imgbbRes && imgbbRes.url ? imgbbRes.url : (typeof imgbbRes === 'string' ? imgbbRes : null);
+                    const deleteUrl = imgbbRes && (imgbbRes.deleteUrl || imgbbRes.delete_url) ? (imgbbRes.deleteUrl || imgbbRes.delete_url) : null;
+                    const docRef = coll.doc();
+                    batch.set(docRef, { url, deleteUrl, category: (it && it.category) ? it.category : 'sin categoría', createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                }
+                await batch.commit();
+                if (statusBox) statusBox.innerText = 'Subida completada (ImgBB + Firestore)';
+                alert('¡Galería actualizada (ImgBB + Firestore)!');
+                return;
+            }
+
+            // If Imgbb not selected/configured, inform the user (client-side storage uploads are not supported)
+            throw new Error('No hay método de subida válido configurado. Selecciona Imgbb o usa Exportar JSON.');
+        } catch (err) {
+            console.error('Upload error', err);
+            if (statusBox) statusBox.innerText = 'Error en subida';
+            alert('Error en la subida: ' + (err.message || String(err)));
+        }
+    }
+}
+
+// --- GALERÍA DE SUEÑOS DINÁMICA ---
+const galeriaGrid = document.querySelector('.portfolio-grid');
+if (galeriaGrid) {
+    async function renderList(imgList) {
+        galeriaGrid.innerHTML = '';
+        // If imgList contains objects, sort by .order if present
+        let list = Array.isArray(imgList) ? imgList.slice() : [];
+        if (list.length && typeof list[0] === 'object' && list[0] !== null) {
+            list.sort((a, b) => (typeof a.order === 'number' ? a.order : 0) - (typeof b.order === 'number' ? b.order : 0));
+        }
+        list.forEach((entry, i) => {
+            const item = document.createElement('div');
+            item.className = 'portfolio-item';
+
+            // If entry is an object from Firestore, respect its layout/rotation/title/category/order
+            const isObj = (typeof entry === 'object' && entry !== null);
+            const layout = isObj ? (entry.layout || 'normal') : 'normal';
+            const rotation = isObj ? parseInt(entry.rotation || 0, 10) : 0;
+            const title = isObj ? (entry.title || 'Galería Sueños') : `Galería de Sueños ${i+1}`;
+            const category = isObj ? (entry.category || 'sin categoría') : 'sin categoría';
+            const url = (typeof entry === 'string') ? entry : (isObj ? (entry.url || entry.src || '') : '');
+
+            if (layout === 'wide') item.classList.add('wide');
+            if (layout === 'tall') item.classList.add('tall');
+
+            const image = document.createElement('img');
+            image.src = url;
+            image.alt = title;
+            // Use CSS variable so rotation/centering behavior matches dashboard
+            image.style.setProperty('--rot', `${rotation}deg`);
+
+            item.setAttribute('data-category', category);
+            if (isObj && entry.order !== undefined) item.dataset.order = String(entry.order);
+            if (isObj && entry.id) item.dataset.docId = entry.id;
+
+            const overlay = document.createElement('div');
+            overlay.className = 'overlay-info';
+            overlay.innerHTML = `<h4>${title}</h4><p>${category}</p>`;
+
+            item.appendChild(image);
+            item.appendChild(overlay);
+            galeriaGrid.appendChild(item);
+        });
+    }
+
+    async function cargarGaleria() {
+        // Determine mode: local forcing or firebase preference
+        try {
+            const modeEl = document.getElementById('uploadModeSelect');
+            const mode = modeEl ? modeEl.value : 'auto';
+            if (mode === 'local') {
+                try {
+                    const localResp = await fetch('/galeria.json');
+                    if (localResp && localResp.ok) {
+                        const imgList = await localResp.json();
+                        renderList(imgList);
+                        console.info('Loaded gallery from local /galeria.json due to forced local mode.');
+                        return;
+                    }
+                } catch (e) {
+                    console.warn('Forced local mode: local fetch failed, falling back', e);
+                }
+            }
+        } catch (e) {
+            console.error('Error reading upload mode selector', e);
+        }
+
+        // Try Firestore first (recommended): collection 'imagenes'
+        try {
+            console.debug('cargarGaleria: firebaseEnabled=', firebaseEnabled);
+            if (typeof firebase !== 'undefined' && firebaseEnabled && firebase.firestore) {
+                try {
+                    const collRef = firebase.firestore().collection('imagenes').orderBy('createdAt', 'desc');
+                    // One-time load
+                    const snapshot = await collRef.get();
+                    console.debug('cargarGaleria: initial snapshot size=', snapshot && snapshot.size);
+                    const list = snapshot.docs.map(d => d.data());
+                    if (list && list.length) {
+                        renderList(list);
+                        console.info('Loaded gallery from Firestore collection `imagenes` (initial).');
+                    }
+                    // Real-time updates: keep gallery synchronized when dashboard adds/updates items
+                    collRef.onSnapshot(snap => {
+                        console.debug('cargarGaleria: onSnapshot fired, docs=', snap.docs.length);
+                        const live = snap.docs.map(d => d.data());
+                        renderList(live);
+                        console.info('Gallery updated from Firestore onSnapshot.');
+                    }, err => { console.error('onSnapshot error', err); });
+                    if (list && list.length) return;
+                } catch (fbCollErr) {
+                    console.warn('Firestore imagenes load failed, falling back', fbCollErr);
+                }
+            } else {
+                console.debug('cargarGaleria: firebase not available or not enabled');
+            }
+        } catch (e) {
+            console.error('Firestore branch error', e);
+        }
+
+        // Final local fallback
+        try {
+            const localResp = await fetch('/galeria.json');
+            if (localResp && localResp.ok) {
+                const imgList = await localResp.json();
+                renderList(imgList);
+                console.info('Loaded gallery from local /galeria.json fallback.');
+                return;
+            }
+            console.warn('Local galeria.json not found or returned non-OK:', localResp && localResp.status);
+        } catch (localErr) {
+            console.error('Local galeria.json fetch failed', localErr);
+        }
+        console.error('All gallery load methods failed: Firestore/local');
+    }
+
+    // Ensure gallery loads after DOM and Firebase initialization
+    document.addEventListener('DOMContentLoaded', () => {
+        try {
+            cargarGaleria();
+        } catch (e) {
+            console.error('cargarGaleria failed on DOMContentLoaded', e);
+        }
+    });
+}

@@ -1,5 +1,24 @@
 {
   "projects": {
-    "default": "fotografias-ensuenos"
-  }
+    "fotografias-ensuenos": "fotografias-ensuenos",
+    "default": "fotografias-ensuenos-35972",
+    "main": "fotografias-ensuenos-35972"
+  },
+  "targets": {
+    "fotografias-ensuenos": {
+      "hosting": {
+        "main": [
+          "fotografias-de-ensuenos"
+        ]
+      }
+    },
+    "fotografias-ensuenos-35972": {
+      "hosting": {
+        "main": [
+          "fotografias-de-ensuenos"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

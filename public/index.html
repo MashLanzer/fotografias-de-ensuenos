@@ -64,7 +64,7 @@
         <div class="hero-bg-anim"></div>
         <div class="hero-overlay"></div>
         <div class="hero-content">
-            <h1 class="fade-in-up" data-i18n="hero_title">Capturando el Alma<br>de tus Recuerdos</h1>
+            <h1 class="fade-in-up" data-i18n="hero_title">Capturando el 23Alma<br>de tus Recuerdos</h1>
             <p class="fade-in-up delay-1" data-i18n="hero_subtitle">Fotografía que cuenta tu historia con naturalidad y
                 emoción.</p>
             <div class="hero-buttons fade-in-up delay-2">
@@ -591,7 +591,25 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <!-- Firebase SDKs (compat). Replace with local copies if needed to avoid CDN blocking. -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    <script>
+        // Updated Firebase config for proyecto `fotografias-ensuenos-35972`
+        window.FIREBASE_CONFIG = {
+            apiKey: "AIzaSyBJKfRHcU9xkrPZg-lpYOBQWEzFTzCVSFc",
+            authDomain: "fotografias-ensuenos-35972.firebaseapp.com",
+            projectId: "fotografias-ensuenos-35972",
+            messagingSenderId: "440755499521",
+            appId: "1:440755499521:web:d9d41ed30ea0e1f3a44600",
+            measurementId: "G-XLTZPGKZJB"
+        };
+        // No client-side IMGBB key. Use server endpoint instead if configured.
+        // Server-side Imgbb endpoint (Cloudflare Worker). Deployed worker URL.
+        window.IMGBB_SERVER_URL = "https://imgbb-proxy.fotos-imgbb.workers.dev";
+    </script>
+    <script src="script.js?v=20260131"></script>
 </body>
 
 </html>
+```

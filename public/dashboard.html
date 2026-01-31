@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="es">
+<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width,initial-scale=1">
+		<title>Dashboard — Galería de Sueños</title>
+		<!-- Fonts & Icons (coinciden con la web principal) -->
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+		<!-- Firebase SDKs (compat) -->
+		<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+		<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+		<script>
+			// Firebase config (mismo proyecto que index.html)
+			window.FIREBASE_CONFIG = {
+				apiKey: "AIzaSyBJKfRHcU9xkrPZg-lpYOBQWEzFTzCVSFc",
+				authDomain: "fotografias-ensuenos-35972.firebaseapp.com",
+				projectId: "fotografias-ensuenos-35972",
+				messagingSenderId: "440755499521",
+				appId: "1:440755499521:web:d9d41ed30ea0e1f3a44600",
+				measurementId: "G-XLTZPGKZJB"
+			};
+			// Initialize Firebase synchronously for dashboard usage
+			try{ if(typeof firebase !== 'undefined' && window.FIREBASE_CONFIG){ if(!firebase.apps || !firebase.apps.length) firebase.initializeApp(window.FIREBASE_CONFIG); } }catch(e){console.warn('Firebase init failed', e)}
+		</script>
+		<link rel="stylesheet" href="style.css">
+		<style>
+			/* Pequeños ajustes específicos para el dashboard, usando variables de `style.css` */
+			.container.dashboard{max-width:1400px;margin:100px auto 40px;padding:0 20px;display:grid;grid-template-columns:320px 1fr;grid-template-rows:auto auto;gap:24px}
+			.panel{background:var(--bg-secondary);border-radius:10px;padding:18px;color:var(--text-color);border:1px solid rgba(255,255,255,0.04)}
+			.upload-area{border:2px dashed rgba(255,255,255,0.06);border-radius:8px;padding:20px;text-align:center;color:var(--text-muted);cursor:pointer}
+			.upload-area.dragover{border-color:var(--accent-color);background:rgba(0,0,0,0.25);color:var(--accent-color)}
+			.thumbs{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+			.thumb{width:96px;height:96px;border-radius:8px;overflow:hidden;background:var(--bg-secondary);border:1px solid rgba(255,255,255,0.03);position:relative;display:flex;align-items:center;justify-content:center}
+			.thumb img{width:100%;height:100%;object-fit:cover}
+			.thumb .remove{position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);color:#fff;border-radius:6px;padding:2px 6px;font-size:12px;cursor:pointer}
+			.field label{font-size:13px;color:var(--text-muted);margin-bottom:6px}
+			.field input,.field textarea,.field select{padding:10px;border:1px solid rgba(255,255,255,0.04);border-radius:8px;background:transparent;color:var(--text-color)}
+			.right-grid{display:grid;grid-template-rows:auto 1fr;gap:14px}
+			.gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+			.card{background:transparent;border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:8px;border:1px solid rgba(255,255,255,0.03)}
+			.card img{width:100%;height:140px;object-fit:cover;border-radius:6px}
+			@media(max-width:880px){.container.dashboard{grid-template-columns:1fr}}
+
+			/* Toast */
+			#toast{position:fixed;right:20px;bottom:24px;background:var(--bg-secondary);color:var(--text-color);padding:12px 16px;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,0.4);opacity:0;transform:translateY(10px);transition:var(--transition);z-index:2000}
+			#toast.show{opacity:1;transform:translateY(0)}
+
+			/* Preview card tweaks */
+			.preview-card{display:grid;grid-template-columns:120px 1fr;gap:12px;align-items:start}
+			.preview-card img{width:120px;height:86px;object-fit:cover;border-radius:6px}
+			.preview-meta{display:flex;flex-direction:column;gap:6px}
+			.meta-row{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--text-muted)}
+			.small-input{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--text-color)}
+			.icon-btn{background:transparent;border:none;color:var(--text-muted);cursor:pointer}
+			.preview-mock{width:120px;height:86px;border-radius:6px;overflow:hidden;border:1px solid rgba(255,255,255,0.04);display:block;position:relative}
+			.preview-mock img{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(var(--rot,0deg)) scale(var(--cover-scale,1.42));min-width:0;min-height:0;width:auto;height:auto;object-fit:cover}
+			.preview-mock.wide{width:240px}
+			.preview-mock.tall{height:172px}
+
+			/* Lightbox rotation uses CSS var */
+			#lb-img{transition:transform 0.2s ease;transform:rotate(var(--rot,0deg));max-height:80vh;display:block;margin:0 auto}
+
+			/* Small button style for modal */
+			.btn-small{padding:8px 12px;font-size:13px;border-radius:8px}
+
+
+			/* Dashboard-specific gallery sizing to show larger previews */
+			#gallery.portfolio-grid{
+				grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+				grid-auto-rows: 320px;
+				gap: 14px;
+			}
+			</style>
+</head>
+	<body>
+		<nav class="navbar">
+			<div class="container nav-container">
+				<a href="/" class="logo">Fotografías Ensueños</a>
+				<ul class="nav-links">
+					<li><a href="/dashboard">Dashboard</a></li>
+					<li><a href="/">Ver sitio</a></li>
+				</ul>
+				<div class="theme-toggle"><i class="fa-solid fa-moon"></i></div>
+			</div>
+		</nav>
+
+	<main class="container dashboard">
+	<aside class="panel">
+			<h3>Subir fotos</h3>
+			<div id="drop-area" class="upload-area" tabindex="0">
+				<p class="muted">Arrastra las imágenes aquí o haz clic para seleccionar (múltiples permitidas)</p>
+				<input id="file-input" type="file" accept="image/*" multiple style="display:none">
+				<div class="thumbs" id="selected-thumbs" aria-live="polite"></div>
+			</div>
+
+			<div class="meta" id="meta-panel">
+				<div class="field">
+					<label>Título por defecto</label>
+					<input id="default-title" placeholder="Título para nuevas fotos">
+				</div>
+				<div class="field">
+					<label>Descripción por defecto</label>
+					<textarea id="default-desc" rows="3" placeholder="Descripción que se aplicará si no se añade otra"></textarea>
+				</div>
+				<div class="field">
+					<label>Visibilidad</label>
+					<select id="default-visibility">
+						<option value="public">Pública</option>
+						<option value="private">Privada</option>
+						<option value="hidden">Oculta</option>
+					</select>
+				</div>
+				<div class="field">
+					<label>Etiquetas (separadas por comas)</label>
+					<input id="default-tags" placeholder="paisaje, noche, sueño">
+				</div>
+
+				<div class="actions" style="margin-top:12px;">
+					<button id="btn-actions-open" class="btn btn-outline" style="padding:8px 12px;font-size:13px">Acciones</button>
+				</div>
+			</div>
+		</aside>
+
+		<div class="panel" id="preview-panel">
+			<h3>Previsualización</h3>
+			<p class="muted">Ajusta título/descripcion antes de guardar. La subida real se implementará después.</p>
+			<div id="preview-list" style="margin-top:12px;display:flex;flex-direction:column;gap:10px"></div>
+		</div>
+
+		<!-- Gallery spans full width below the upload + preview panels -->
+		<div class="panel gallery-panel" id="gallery-panel" style="grid-column:1 / -1">
+			<h3>Galería actual (ejemplo)</h3>
+			<p class="muted">Aquí verás las imágenes guardadas en la web principal y las que añadas desde este dashboard.</p>
+			<div class="portfolio-grid" id="gallery">
+				<!-- Galería vacía: se cargarán las imágenes desde Firestore o las que añadas -->
+			</div>
+		</div>
+	</main>
+
+	<div id="toast" role="status" aria-live="polite"></div>
+
+<!-- Actions modal -->
+<div id="actions-modal" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;z-index:2500">
+	<div style="position:absolute;inset:0;background:rgba(0,0,0,0.5)"></div>
+	<div style="position:relative;max-width:420px;width:90%;background:var(--bg-secondary);border-radius:10px;padding:18px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 12px 40px rgba(0,0,0,0.6)">
+		<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+			<strong style="color:var(--white)">Acciones</strong>
+			<button id="actions-close" class="icon-btn" style="color:var(--text-muted)"><i class="fa-solid fa-xmark"></i></button>
+		</div>
+		<p class="muted" style="margin-bottom:12px">Dentro de este panel puedes aplicar o limpiar la galería. Acciones pequeñas para ahorrar espacio.</p>
+		<div style="display:flex;gap:8px;justify-content:flex-end">
+			<button id="btn-save" class="btn btn-primary btn-small">Guardar cambios</button>
+			<button id="btn-cancel" class="btn btn-outline btn-small">Cancelar</button>
+			<button id="btn-clear-gallery" class="btn btn-small" style="background:#7f1d1d;color:#fff;border-color:#7f1d1d">Limpiar Galería</button>
+		</div>
+	</div>
+</div>
+
+	<!-- Lightbox / preview modal -->
+	<div id="lightbox" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:2200;align-items:center;justify-content:center;padding:24px">
+		<div style="max-width:1100px;width:100%;position:relative">
+			<button id="lb-close" class="icon-btn" style="position:absolute;top:10px;right:10px;color:var(--white);font-size:22px;background:transparent;border:none"><i class="fa-solid fa-xmark"></i></button>
+			<img id="lb-img" src="" alt="preview" style="width:100%;height:auto;border-radius:8px;display:block;object-fit:contain;box-shadow:0 20px 60px rgba(0,0,0,0.6)">
+			<div id="lb-caption" style="margin-top:12px;color:var(--text-muted);display:flex;justify-content:space-between;align-items:center">
+				<div><strong id="lb-title" style="color:var(--white)"></strong><div id="lb-cat" style="font-size:14px;color:var(--text-muted)"></div></div>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		const drop = document.getElementById('drop-area');
+		const fileInput = document.getElementById('file-input');
+		const thumbs = document.getElementById('selected-thumbs');
+		const previewList = document.getElementById('preview-list');
+		const btnSave = document.getElementById('btn-save');
+		const btnCancel = document.getElementById('btn-cancel');
+		const toast = document.getElementById('toast');
+		const themeToggle = document.querySelector('.theme-toggle');
+		const gallery = document.getElementById('gallery');
+		let previewCounter = 0;
+
+		function prevent(e){e.preventDefault(); e.stopPropagation();}
+		['dragenter','dragover','dragleave','drop'].forEach(evt=>drop.addEventListener(evt,prevent));
+		drop.addEventListener('dragover',()=>drop.classList.add('dragover'));
+		drop.addEventListener('dragleave',()=>drop.classList.remove('dragover'));
+		drop.addEventListener('drop',(e)=>{
+			drop.classList.remove('dragover');
+			const files = Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith('image/'));
+			handleFiles(files);
+		});
+		drop.addEventListener('click',()=>fileInput.click());
+		fileInput.addEventListener('change',()=>handleFiles(Array.from(fileInput.files)));
+
+		function bytesToSize(bytes){
+			const sizes = ['B','KB','MB','GB','TB']; if(bytes===0) return '0 B'; const i = Math.floor(Math.log(bytes)/Math.log(1024)); return parseFloat((bytes/Math.pow(1024,i)).toFixed(1)) + ' ' + sizes[i];
+		}
+
+		function handleFiles(files){
+			files.forEach(file=>{
+				const url = URL.createObjectURL(file);
+				const el = document.createElement('div'); el.className='thumb';
+				const img = document.createElement('img'); img.src = url; el.appendChild(img);
+				el.dataset.rotation = '0';
+				const rm = document.createElement('button'); rm.className='remove icon-btn'; rm.innerHTML='<i class="fa-solid fa-xmark"></i>';
+				rm.title='Quitar';
+				rm.addEventListener('click',()=>{ // remove thumbnail and its preview
+					const idx = Array.from(thumbs.children).indexOf(el);
+					el.remove();
+					const p = previewList.children[idx]; if(p) p.remove();
+					updatePreview();
+				}); el.appendChild(rm);
+				thumbs.appendChild(el);
+
+				// preview entry with metadata
+				const p = document.createElement('div'); p.className='card preview-card';
+				// mock preview that reflects chosen layout
+				const mock = document.createElement('div'); mock.className='preview-mock portfolio-item';
+				const mockImg = document.createElement('img'); mockImg.src = url; mock.appendChild(mockImg);
+				p.appendChild(mock);
+				// (removed duplicate small thumb) the mock shows the preview in the chosen layout
+				p.dataset.rotation = '0';
+				const meta = document.createElement('div'); meta.className='preview-meta';
+				const name = document.createElement('div'); name.className='meta-row'; name.innerHTML = '<strong style="color:var(--white)">' + file.name + '</strong> <span style="margin-left:8px">' + bytesToSize(file.size) + '</span>';
+				const title = document.createElement('input'); title.className='small-input'; title.placeholder='Título (opcional)';
+				const desc = document.createElement('textarea'); desc.className='small-input'; desc.rows=2; desc.placeholder='Descripción (opcional)';
+				const tags = document.createElement('input'); tags.className='small-input'; tags.placeholder='Etiquetas (coma)';
+				const layoutSelect = document.createElement('select'); layoutSelect.className='small-input';
+				layoutSelect.innerHTML = '<option value="normal">Normal</option><option value="wide">Wide</option><option value="tall">Tall</option>';
+				const rowActions = document.createElement('div'); rowActions.style.display='flex'; rowActions.style.gap='8px';
+				// rotation buttons
+				const rotateLeft = document.createElement('button'); rotateLeft.className='icon-btn'; rotateLeft.title='Girar izq'; rotateLeft.innerHTML='<i class="fa-solid fa-rotate-left"></i>';
+				const rotateRight = document.createElement('button'); rotateRight.className='icon-btn'; rotateRight.title='Girar der'; rotateRight.innerHTML='<i class="fa-solid fa-rotate-right"></i>';
+				rotateLeft.addEventListener('click', ()=>{ const idx = Array.from(previewList.children).indexOf(p); rotateAtIndex(idx, -90); });
+				rotateRight.addEventListener('click', ()=>{ const idx = Array.from(previewList.children).indexOf(p); rotateAtIndex(idx, 90); });
+
+				// apply to gallery button
+				const applyButton = document.createElement('button'); applyButton.className='btn btn-primary'; applyButton.textContent='Aplicar a galería';
+				applyButton.addEventListener('click', ()=>{ createGalleryItemFromPreview(p); showToast('Imagen aplicada a la galería'); });
+
+				const removeButton = document.createElement('button'); removeButton.className='btn btn-outline'; removeButton.textContent='Quitar';
+				removeButton.addEventListener('click',()=>{ const idx = Array.from(previewList.children).indexOf(p); if(thumbs.children[idx]) thumbs.children[idx].remove(); p.remove(); updatePreview();});
+				rowActions.appendChild(rotateLeft); rowActions.appendChild(rotateRight); rowActions.appendChild(applyButton); rowActions.appendChild(removeButton);
+				meta.appendChild(name); meta.appendChild(title); meta.appendChild(desc); meta.appendChild(tags); meta.appendChild(layoutSelect); meta.appendChild(rowActions);
+				p.appendChild(meta);
+				// preview mock initial layout
+				mock.classList.remove('wide','tall');
+				layoutSelect.addEventListener('change', ()=>{ p.dataset.layout = layoutSelect.value; mock.classList.toggle('wide', layoutSelect.value==='wide'); mock.classList.toggle('tall', layoutSelect.value==='tall'); showToast('Diseño: ' + layoutSelect.value); });
+				// assign preview id
+				const previewId = 'pv-' + (previewCounter++);
+				p.dataset.previewId = previewId;
+				thumbs.lastChild && (thumbs.lastChild.dataset.previewId = previewId);
+				// store initial layout
+				p.dataset.layout = 'normal';
+				layoutSelect.addEventListener('change', ()=>{ p.dataset.layout = layoutSelect.value; showToast('Diseño: ' + layoutSelect.value); });
+				previewList.appendChild(p);
+			});
+			updatePreview();
+		}
+
+        
+
+		function rotateAtIndex(idx, delta){
+			// rotate preview card image and corresponding thumb
+			const p = previewList.children[idx];
+			const t = thumbs.children[idx];
+			if(!p || !t) return;
+			const imgP = p.querySelector('img');
+			const imgT = t.querySelector('img');
+			const prev = parseInt(p.dataset.rotation || '0', 10);
+			const next = (prev + delta + 360) % 360;
+			p.dataset.rotation = String(next);
+			t.dataset.rotation = String(next);
+			if(imgP) imgP.style.setProperty('--rot', `${next}deg`);
+			if(imgT) imgT.style.setProperty('--rot', `${next}deg`);
+			// if a gallery item was created from this preview, update it too
+			const previewId = p.dataset.previewId;
+			if(previewId){
+				const g = gallery.querySelector(`[data-preview-id="${previewId}"]`);
+				if(g){ g.dataset.rotation = String(next); const gi = g.querySelector('img'); if(gi) gi.style.setProperty('--rot', `${next}deg`); }
+			}
+			// update mock if exists
+			const mock = p.querySelector('.preview-mock img'); if(mock) mock.style.setProperty('--rot', `${next}deg`);
+			showToast('Rotado ' + (delta>0? 'derecha':'izquierda') + ' (' + next + '°)');
+		}
+
+		function updatePreview(){
+			btnSave.disabled = previewList.children.length === 0 && thumbs.children.length === 0;
+		}
+
+		function updateThumbsForPreview(){
+			// keep thumbnails and preview in sync in this simple UI (no strict mapping for now)
+			Array.from(thumbs.children).forEach((t,i)=>{ if(!previewList.children[i]) t.style.opacity=0.5; });
+			updatePreview();
+		}
+
+		btnSave.addEventListener('click', async ()=>{
+			// Persistir todas las previsualizaciones (si no están ya guardadas)
+			const previews = Array.from(previewList.children);
+			if(previews.length === 0){ showToast('No hay previsualizaciones para guardar'); return; }
+			showToast('Guardando...');
+			for(const p of previews){
+				// si ya tiene docId asumimos que ya está sincronizada
+				if(p.dataset.docId) continue;
+				try{
+					await createGalleryItemFromPreview(p);
+				}catch(e){ console.warn('Error guardando preview', e); }
+			}
+			showToast('Guardado completado');
+		});
+
+		btnCancel.addEventListener('click',()=>{
+			// limpiar selección
+			thumbs.innerHTML=''; previewList.innerHTML=''; updatePreview();
+			showToast('Selección borrada');
+		});
+
+		function showToast(msg, ms=3000){
+			toast.textContent = msg; toast.classList.add('show'); setTimeout(()=>{toast.classList.remove('show')}, ms);
+		}
+
+		// theme toggle
+		themeToggle && themeToggle.addEventListener('click', ()=>{
+			document.body.classList.toggle('light-mode');
+			const icon = themeToggle.querySelector('i'); if(icon) icon.classList.toggle('fa-sun'); icon.classList.toggle('fa-moon');
+		});
+
+		// gallery preview (lightbox) behavior
+		const lightbox = document.getElementById('lightbox');
+		const lbImg = document.getElementById('lb-img');
+		const lbTitle = document.getElementById('lb-title');
+		const lbCat = document.getElementById('lb-cat');
+		const lbClose = document.getElementById('lb-close');
+
+		function openLightbox(imgSrc, title, cat){
+			lbImg.src = imgSrc; lbTitle.textContent = title || ''; lbCat.textContent = cat || ''; lightbox.style.display = 'flex';
+		}
+		function closeLightbox(){ lightbox.style.display = 'none'; lbImg.src = ''; }
+		lbClose.addEventListener('click', closeLightbox);
+		lightbox.addEventListener('click', (e)=>{ if(e.target === lightbox) closeLightbox(); });
+
+		// attach click handlers to gallery items
+		function initGalleryPreview(){
+			const items = document.querySelectorAll('#gallery .portfolio-item');
+			items.forEach(it=>{
+				it.style.cursor = 'pointer';
+				it.addEventListener('click', ()=>{
+					const img = it.querySelector('img');
+					const title = it.querySelector('.overlay-info h4')?.textContent || '';
+					const cat = it.querySelector('.overlay-info p')?.textContent || '';
+					// respect rotation when opening
+					const rot = parseInt(it.dataset.rotation || '0', 10) || 0;
+					openLightbox(img.src, title, cat);
+					// apply rotation visually in lightbox
+					setTimeout(()=>{ const lb = document.getElementById('lb-img'); if(lb) lb.style.setProperty('--rot', `${rot}deg`); }, 50);
+				});
+				it.addEventListener('keypress', (e)=>{ if(e.key === 'Enter') it.click(); });
+			});
+		}
+		initGalleryPreview();
+
+		// Load existing gallery items from Firestore on start
+		async function createGalleryItemFromPreview(p){
+			const imgSrc = p.querySelector('img')?.src;
+			const titleInput = p.querySelector('input');
+			const title = titleInput?.value || (p.querySelector('.meta-row strong')?.textContent || 'Untitled');
+			const rawTags = p.querySelector('input[placeholder*="Etiquetas"]')?.value || '';
+			const userTags = rawTags.split(',').map(s=>s.trim()).filter(Boolean);
+			const presetTags = ['Bodas','Familia','Retratos'];
+			const finalTags = Array.from(new Set([...presetTags, ...userTags]));
+			const cat = finalTags.length ? finalTags[0] : '';
+			const rot = parseInt(p.dataset.rotation || '0', 10) || 0;
+			const layout = p.dataset.layout || 'normal';
+
+			// Create a local gallery element immediately (optimistic UI)
+			const div = document.createElement('div'); div.className='portfolio-item'; div.tabIndex = 0;
+			if(layout==='wide') div.classList.add('wide'); if(layout==='tall') div.classList.add('tall');
+			div.dataset.rotation = String(rot);
+			div.dataset.previewId = p.dataset.previewId || '';
+			div.innerHTML = `<img src="${imgSrc}" alt="${title}"><div class="overlay-info"><h4>${title}</h4><p>${cat}</p></div>`;
+			const gimg = div.querySelector('img'); if(gimg) gimg.style.setProperty('--rot', `${rot}deg`);
+			div.draggable = true; gallery.appendChild(div); attachDragHandlers(div);
+
+			// click opens lightbox
+			div.addEventListener('click', ()=>{ openLightbox(imgSrc, title, cat); setTimeout(()=>{ const lb = document.getElementById('lb-img'); if(lb) lb.style.setProperty('--rot', `${rot}deg`); },50); });
+
+			// Convert image src (object URL) to dataURL so we can persist and render from Firestore
+			async function toDataURL(src){
+				try{
+					const resp = await fetch(src);
+					const blob = await resp.blob();
+					return await new Promise((res,rej)=>{ const r = new FileReader(); r.onload = ()=>res(r.result); r.onerror = rej; r.readAsDataURL(blob); });
+				}catch(e){ console.warn('toDataURL failed', e); return src; }
+			}
+
+			try{
+				if(typeof firebase !== 'undefined' && firebase.firestore){
+					const db = firebase.firestore();
+					const dataUrl = await toDataURL(imgSrc);
+					// Save to collection `imagenes` so the public gallery loads the same items
+					const docRef = await db.collection('imagenes').add({
+						url: dataUrl,
+						title: title,
+						category: cat || '',
+						tags: finalTags,
+						rotation: rot,
+						layout: layout || 'normal',
+						previewId: p.dataset.previewId || null,
+						createdAt: firebase.firestore.FieldValue.serverTimestamp()
+					});
+					// store doc id on preview and local element so future updates (rotation/order) can target it
+					if(docRef && docRef.id){ p.dataset.docId = docRef.id; div.dataset.docId = docRef.id; }
+					console.info('Firestore: created imagenes doc', docRef && docRef.id);
+					showToast('Elemento añadido y sincronizado (Firestore)');
+				} else {
+					showToast('Firestore no disponible — creada localmente');
+				}
+			}catch(err){
+				console.error('createGalleryItemFromPreview failed', err);
+				showToast('Error guardando en Firestore — creada localmente');
+			}
+		}
+
+		// Drag & drop helpers (attach to new gallery items)
+		let draggedEl = null;
+		function attachDragHandlers(el){
+			el.addEventListener('dragstart', (e)=>{ draggedEl = el; el.classList.add('dragging'); try{ e.dataTransfer.effectAllowed = 'move'; }catch(_){} });
+			el.addEventListener('dragend', ()=>{ if(draggedEl) draggedEl.classList.remove('dragging'); draggedEl = null; persistOrder(); });
+			el.addEventListener('dragover', (e)=>{ e.preventDefault(); try{ e.dataTransfer.dropEffect = 'move'; }catch(_){} el.classList.add('drag-over'); });
+			el.addEventListener('dragleave', ()=>{ el.classList.remove('drag-over'); });
+			el.addEventListener('drop', (e)=>{ e.preventDefault(); el.classList.remove('drag-over'); if(!draggedEl || draggedEl === el) return; gallery.insertBefore(draggedEl, el); persistOrder(); });
+		}
+
+		async function persistOrder(){
+			try{
+				if(typeof firebase !== 'undefined' && firebase.firestore){
+					const db = firebase.firestore();
+					const children = Array.from(gallery.children);
+					for(let i=0;i<children.length;i++){
+						const ch = children[i];
+						const id = ch.dataset.docId;
+						if(id){
+							await db.collection('imagenes').doc(id).update({ order: i });
+						}
+					}
+					showToast('Orden guardado');
+				}
+			}catch(err){ console.warn('Persist order failed', err); showToast('No se pudo guardar el orden'); }
+		}
+
+		// Inicialización ligera
+		updatePreview();
+
+		// Clear public gallery (delete all documents in 'imagenes')
+		async function clearPublicGallery(){
+			if(!confirm('¿Eliminar todas las imágenes públicas? Esta acción no se puede deshacer.')) return;
+			try{
+				if(typeof firebase === 'undefined' || !firebase.firestore) throw new Error('Firestore no disponible');
+				const db = firebase.firestore();
+				const coll = db.collection('imagenes');
+				const snap = await coll.get();
+				if(!snap || !snap.docs || snap.docs.length === 0){ showToast('No hay imágenes para borrar'); return; }
+				// delete in batches
+				const batchSize = 400; // keep below 500
+				let docs = snap.docs.slice();
+				while(docs.length){
+					const chunk = docs.splice(0, batchSize);
+					const batch = db.batch();
+					for(const d of chunk){
+						const data = d.data && d.data();
+						const delUrl = data && (data.deleteUrl || data.delete_url);
+						if(delUrl){ try{ fetch(delUrl).catch(()=>{}); }catch(_){} }
+						batch.delete(d.ref);
+					}
+					await batch.commit();
+				}
+				// clear UI
+				gallery.innerHTML = '';
+				showToast('Galería pública limpiada');
+			}catch(err){
+				console.error('clearPublicGallery failed', err);
+				showToast('No se pudo limpiar la galería: ' + (err.message || 'error'));
+			}
+		}
+
+		// wire clear gallery button
+		const btnClear = document.getElementById('btn-clear-gallery');
+		if(btnClear) btnClear.addEventListener('click', clearPublicGallery);
+
+		// Actions modal wiring
+		const btnActionsOpen = document.getElementById('btn-actions-open');
+		const actionsModal = document.getElementById('actions-modal');
+		const actionsClose = document.getElementById('actions-close');
+		if(btnActionsOpen && actionsModal){ btnActionsOpen.addEventListener('click', ()=>{ actionsModal.style.display='flex'; }); }
+		if(actionsClose && actionsModal){ actionsClose.addEventListener('click', ()=>{ actionsModal.style.display='none'; }); }
+		// close modal when clicking overlay background
+		if(actionsModal){ actionsModal.addEventListener('click', (e)=>{ if(e.target === actionsModal) actionsModal.style.display='none'; }); }
+
+		// Real-time listener to show `imagenes` in dashboard gallery as they are added/updated
+		function listenGalleryRealtime(){
+			if(typeof firebase === 'undefined' || !firebase.firestore) return;
+			const db = firebase.firestore();
+			db.collection('imagenes').orderBy('order').onSnapshot(snap=>{
+				gallery.innerHTML = '';
+				snap.forEach(doc=>{
+					const data = doc.data() || {};
+					const title = data.title || '';
+					const tags = data.tags || [];
+					const cat = data.category || (tags.length ? tags[0] : '');
+					const url = data.url || data.src || '';
+					const rot = data.rotation || 0;
+					const layout = data.layout || 'normal';
+					const div = document.createElement('div'); div.className='portfolio-item'; div.tabIndex=0;
+					if(layout==='wide') div.classList.add('wide'); if(layout==='tall') div.classList.add('tall');
+					div.dataset.rotation = String(rot); div.dataset.docId = doc.id;
+					div.innerHTML = `<img src="${url}" alt="${title}"><div class="overlay-info"><h4>${title}</h4><p>${cat}</p></div>`;
+					const gimg = div.querySelector('img'); if(gimg) gimg.style.setProperty('--rot', `${rot}deg`);
+					attachDragHandlers(div);
+					div.addEventListener('click', ()=>{ openLightbox(url, title, cat); setTimeout(()=>{ if(document.getElementById('lb-img')) document.getElementById('lb-img').style.setProperty('--rot', `${rot}deg`); },50); });
+					gallery.appendChild(div);
+				});
+				initGalleryPreview();
+			});
+		}
+		listenGalleryRealtime();
+	</script>
+</body>
+</html>
+
+

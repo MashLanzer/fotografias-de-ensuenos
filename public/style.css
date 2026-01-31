@@ -467,11 +467,24 @@ body.light-mode .filter-btn.active {
     /* transition: transform 0.4s ease; removed to allow filter animation */
 }
 
+.portfolio-item {
+    /* allow child to set hover scale via CSS variable */
+    --hover-scale: 1;
+}
 .portfolio-item img {
-    width: 100%;
-    height: 100%;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    /* rotation + combined scale: cover-scale ensures coverage even at diagonal rotations */
+    /* default cover-scale ~ sqrt(2) (1.414) to avoid transparent corners when rotated */
+    transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) scale(calc(var(--cover-scale, 1.42) * var(--hover-scale, 1)));
+    transition: transform 0.45s ease;
+    /* Keep intrinsic sizing but ensure coverage */
+    min-width: 0;
+    min-height: 0;
+    width: auto;
+    height: auto;
     object-fit: cover;
-    transition: transform 0.6s ease;
 }
 
 /* Wide item: Spans 2 columns */
@@ -503,8 +516,8 @@ body.light-mode .filter-btn.active {
     }
 }
 
-.portfolio-item:hover img {
-    transform: scale(1.1);
+.portfolio-item:hover{
+    --hover-scale: 1.07;
 }
 
 /* Hover Overlay Text */
@@ -1478,4 +1491,100 @@ body.light-mode .faq-compact-container {
 
 body.light-mode .faq-grid.compact .faq-item {
     border-color: rgba(0, 0, 0, 0.05);
+}
+
+/* --- DASHBOARD ESTILOS --- */
+.dashboard-form {
+  max-width: 500px;
+  margin: 40px auto 24px auto;
+  background: var(--bg-secondary);
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+  padding: 32px 24px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.dashboard-form label {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--accent-color);
+}
+.dashboard-form input[type="file"] {
+  background: var(--bg-color);
+  color: var(--text-color);
+  border: 1px solid var(--accent-color);
+  border-radius: 8px;
+  padding: 8px;
+}
+.dashboard-form input[type="number"] {
+  width: 80px;
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid var(--accent-color);
+  background: var(--bg-color);
+  color: var(--text-color);
+}
+.dashboard-form button {
+  background: var(--accent-color);
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 12px;
+  transition: background 0.2s;
+}
+.dashboard-form button:hover {
+  background: var(--accent-hover);
+}
+#preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 24px auto 0 auto;
+  justify-content: center;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 18px 8px;
+  min-height: 80px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+}
+#preview img {
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  border: 2px solid var(--accent-color);
+  max-width: 120px;
+  max-height: 120px;
+  object-fit: cover;
+}
+@media (max-width: 600px) {
+  .dashboard-form {
+    padding: 18px 6px 12px 6px;
+  }
+  #preview img {
+    max-width: 80px;
+    max-height: 80px;
+  }
+}
+
+/* Dashboard layout */
+.dashboard-header { padding: 24px 0; }
+.dashboard-header-inner { display:flex;justify-content:space-between;align-items:center; }
+.dashboard-grid { display:grid; grid-template-columns: 300px 1fr 260px; gap:24px; align-items:start; margin-top:24px; }
+.panel { background: var(--bg-secondary); padding:18px; border-radius:12px; box-shadow: 0 6px 20px rgba(0,0,0,0.06); }
+.panel h3 { margin-bottom:12px; }
+.panel-section { margin-top:18px; color:var(--text-muted); }
+.muted { color:var(--text-muted); font-size:0.95rem; }
+.row { display:flex; align-items:center; gap:12px; margin-top:8px; }
+.preview-box { min-height:120px; display:flex; flex-wrap:wrap; gap:12px; padding:12px; border-radius:8px; background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent); }
+.preview-gallery { margin-top:12px; display:grid; grid-template-columns: repeat(auto-fill,minmax(160px,1fr)); gap:12px; }
+.preview-gallery .portfolio-item { border-radius:8px; overflow:hidden; }
+.preview-gallery img { width:100%; height:140px; object-fit:cover; display:block; }
+.status-box { padding:12px; background: rgba(0,0,0,0.04); border-radius:8px; }
+
+@media (max-width: 980px) {
+    .dashboard-grid { grid-template-columns: 1fr; }
 }

@@ -1,16 +1,26 @@
 {
   "hosting": {
     "public": "public",
+    "cleanUrls": true,
+    "rewrites": [
+      {
+        "source": "/dashboard",
+        "destination": "/dashboard.html"
+      },
+      {
+        "source": "/dashboard/",
+        "destination": "/dashboard.html"
+      }
+    ],
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
-    ],
-    "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
     ]
+  }
+
+  ,
+  "firestore": {
+    "rules": "firestore.rules"
   }
 }
