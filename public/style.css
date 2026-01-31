@@ -349,6 +349,94 @@ body.light-mode .navbar.scrolled {
     position: relative;
 }
 
+/* Manuel Profile Section Styles */
+.profile-manuel {
+    background-color: var(--bg-secondary);
+    position: relative;
+    overflow: hidden;
+}
+
+.profile-manuel .about-image {
+    position: relative;
+    padding: 30px;
+}
+
+.profile-manuel .about-image img {
+    border-radius: 10px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    z-index: 2;
+    position: relative;
+    transition: var(--transition);
+}
+
+.profile-manuel .about-image:hover img {
+    transform: translateY(-10px);
+}
+
+.profile-manuel .about-image::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 120px;
+    height: 120px;
+    border-top: 4px solid var(--accent-color);
+    border-left: 4px solid var(--accent-color);
+    z-index: 1;
+}
+
+.profile-manuel .about-image::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 120px;
+    height: 120px;
+    border-bottom: 4px solid var(--accent-color);
+    border-right: 4px solid var(--accent-color);
+    z-index: 1;
+}
+
+.profile-manuel .category-tag {
+    display: inline-block;
+    color: var(--accent-color);
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 5px;
+    margin-bottom: 20px;
+    font-weight: 700;
+}
+
+.stat-item {
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.02);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    text-align: center;
+    flex: 1;
+    transition: var(--transition);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.stat-item:hover {
+    background: rgba(205, 164, 94, 0.05);
+    border-color: var(--accent-color);
+    transform: translateY(-8px);
+}
+
+@media (max-width: 768px) {
+    .profile-manuel .about-grid {
+        grid-template-columns: 1fr;
+        gap: 60px;
+    }
+
+    .profile-manuel .about-image::before,
+    .profile-manuel .about-image::after {
+        display: none;
+    }
+}
+
 .about-image::before {
     content: '';
     position: absolute;

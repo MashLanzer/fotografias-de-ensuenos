@@ -55,7 +55,7 @@ async function clearExistingImages() {
                     const data = d.data && d.data();
                     const del = data && (data.deleteUrl || data.delete_url);
                     if (del) {
-                        try { fetch(del).catch(() => {}); } catch (e) { console.warn('ImgBB delete call failed', e); }
+                        try { fetch(del).catch(() => { }); } catch (e) { console.warn('ImgBB delete call failed', e); }
                     }
                     batch.delete(d.ref);
                 }
@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Run quick access check after init
-    checkFirebaseAccess().catch(() => {});
+    checkFirebaseAccess().catch(() => { });
 
     // subirImagenImgBB and clearExistingImages are defined at module scope
     // so they can be used by upload logic declared later in the file.
@@ -280,7 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const subject = `Nueva Consulta: ${tipoSesion} - ${nombre}`;
             const body = `Nombre: ${nombre}%0D%0AEmail: ${email}%0D%0ATipo de Sesión: ${tipoSesion}%0D%0A%0D%0AMensaje:%0D%0A${mensaje}`;
 
-            const mailtoLink = `mailto:brayanibarra0105@gmail.com?subject=${encodeURIComponent(subject)}&body=${body}`;
+            const mailtoLink = `mailto:estudioensuenos@gmail.com?subject=${encodeURIComponent(subject)}&body=${body}`;
 
             window.location.href = mailtoLink;
         });
@@ -343,102 +343,126 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Portfolio Filtering ---
-    const filterBtns = document.querySelectorAll('.filter-btn');
-    if (filterBtns.length) {
-        filterBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                filterBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                const filterValue = btn.getAttribute('data-filter');
-                // Query current items dynamically (supports items rendered after load)
-                const currentItems = document.querySelectorAll('.portfolio-item');
-                currentItems.forEach(item => {
-                    const cat = item.getAttribute('data-category') || 'sin categoría';
-                    if (filterValue === 'all' || cat === filterValue) {
-                        item.classList.remove('hide');
-                        item.classList.add('show');
-                    } else {
-                        item.classList.remove('show');
-                        item.classList.add('hide');
-                    }
-                });
+    // --- Portfolio Filtering (Event Delegation) ---
+    const filterContainer = document.querySelector('.portfolio-filter');
+    if (filterContainer) {
+        filterContainer.addEventListener('click', (e) => {
+            const btn = e.target.closest('.filter-btn');
+            if (!btn) return;
+
+            // Remove active class from all buttons and add to the clicked one
+            filterContainer.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            const filterValue = btn.getAttribute('data-filter');
+            const currentItems = document.querySelectorAll('.portfolio-item');
+            currentItems.forEach(item => {
+                const cat = item.getAttribute('data-category') || 'sin categoría';
+                if (filterValue === 'all' || cat === filterValue) {
+                    item.classList.remove('hide');
+                    item.classList.add('show');
+                } else {
+                    item.classList.remove('show');
+                    item.classList.add('hide');
+                }
             });
         });
     }
 
-    // --- Lightbox Gallery ---
+    // Function to generate filter buttons dynamically
+    window.updateDynamicFilters = function (list) {
+        const container = document.querySelector('.portfolio-filter');
+        if (!container) return;
+
+        // Keep only 'all' button
+        const todoBtn = container.querySelector('[data-filter="all"]');
+        container.innerHTML = '';
+        if (todoBtn) container.appendChild(todoBtn);
+
+        // Extract unique categories
+        const categories = [...new Set(list.map(entry => {
+            const isObj = (typeof entry === 'object' && entry !== null);
+            return isObj ? (entry.category || 'sin categoría') : 'sin categoría';
+        }))].filter(c => c !== 'all' && c !== 'sin categoría');
+
+        categories.sort().forEach(cat => {
+            const btn = document.createElement('button');
+            btn.className = 'filter-btn';
+            btn.setAttribute('data-filter', cat);
+            btn.innerText = cat.charAt(0).toUpperCase() + cat.slice(1);
+            container.appendChild(btn);
+        });
+    };
+
+    // --- Lightbox Gallery (Dynamic) ---
     const lightbox = document.getElementById('lightbox');
     const lightboxImgAfter = document.getElementById('lightbox-img-after');
     const lightboxImgBefore = document.getElementById('lightbox-img-before');
     const comparisonContainer = document.querySelector('.comparison-container');
     const scroller = document.getElementById('scroller');
-    // shared dragging state for comparison scroller
     let isDragging = false;
+    let lightboxIndex = 0;
+    let currentLightboxImages = [];
+
     if (lightbox && lightbox.style) {
         lightbox.addEventListener('click', (e) => {
-            if (e.target === lightbox) {
-                lightbox.classList.remove('active');
-                document.body.style.overflow = 'auto';
-            }
+            if (e.target === lightbox) closeModal();
         });
     }
 
     const closeBtn = document.querySelector('.close-lightbox');
     const prevBtn = document.querySelector('.prev');
     const nextBtn = document.querySelector('.next');
-    const portfolioItems = document.querySelectorAll('.portfolio-item img');
 
-    // Only initialize lightbox behavior if all required elements exist
-    if (lightbox && lightboxImgAfter && lightboxImgBefore && portfolioItems.length) {
-        let lightboxIndex = 0;
-        const images = Array.from(portfolioItems).map(img => img.src);
+    function openLightbox(index, images) {
+        if (!images || !images.length) return;
+        currentLightboxImages = images;
+        lightboxIndex = index;
+        lightboxImgAfter.src = currentLightboxImages[lightboxIndex];
+        lightboxImgBefore.src = currentLightboxImages[lightboxIndex];
 
-        function openLightbox(index) {
-            lightboxIndex = index;
-            lightboxImgAfter.src = images[lightboxIndex];
-            lightboxImgBefore.src = images[lightboxIndex];
+        if (comparisonContainer) comparisonContainer.style.setProperty('--pos', '50%');
 
-            if (comparisonContainer && comparisonContainer.style) comparisonContainer.style.setProperty('--pos', '50%');
-
-            lightbox.classList.add('active');
-            document.body.style.overflow = 'hidden';
-        }
-
-        function closeModal() {
-            lightbox.classList.remove('active');
-            document.body.style.overflow = 'auto';
-        }
-
-        function showImage(n) {
-            lightboxIndex += n;
-            if (lightboxIndex >= images.length) {
-                lightboxIndex = 0;
-            } else if (lightboxIndex < 0) {
-                lightboxIndex = images.length - 1;
-            }
-            lightboxImgAfter.src = images[lightboxIndex];
-            lightboxImgBefore.src = images[lightboxIndex];
-        }
-
-        // Comparison Scroller Logic
-
-        // Event Listeners for Portfolio Items
-        if (typeof portfolioItems !== 'undefined' && portfolioItems.length) {
-            portfolioItems.forEach((item, index) => {
-                if (item.parentElement) {
-                    item.parentElement.addEventListener('click', () => {
-                        openLightbox(index);
-                    });
-                }
-            });
-        }
-
-        // Event Listeners for Controls
-        if (closeBtn) closeBtn.addEventListener('click', closeModal);
-        if (prevBtn) prevBtn.addEventListener('click', () => showImage(-1));
-        if (nextBtn) nextBtn.addEventListener('click', () => showImage(1));
+        lightbox.classList.add('active');
+        document.body.style.overflow = 'hidden';
     }
+
+    function closeModal() {
+        if (lightbox) lightbox.classList.remove('active');
+        document.body.style.overflow = 'auto';
+    }
+
+    function showImage(n) {
+        if (!currentLightboxImages.length) return;
+        lightboxIndex += n;
+        if (lightboxIndex >= currentLightboxImages.length) lightboxIndex = 0;
+        else if (lightboxIndex < 0) lightboxIndex = currentLightboxImages.length - 1;
+
+        lightboxImgAfter.src = currentLightboxImages[lightboxIndex];
+        lightboxImgBefore.src = currentLightboxImages[lightboxIndex];
+    }
+
+    // Event Delegation for Portfolio Grid
+    const galeriaGridMain = document.querySelector('.portfolio-grid');
+    if (galeriaGridMain) {
+        galeriaGridMain.addEventListener('click', (e) => {
+            const item = e.target.closest('.portfolio-item');
+            if (!item) return;
+
+            // Get currently filtered (visible) images
+            const visibleImgs = Array.from(document.querySelectorAll('.portfolio-item:not(.hide) img'));
+            const clickedImg = item.querySelector('img');
+            const idx = visibleImgs.indexOf(clickedImg);
+
+            if (idx !== -1) {
+                openLightbox(idx, visibleImgs.map(img => img.src));
+            }
+        });
+    }
+
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (prevBtn) prevBtn.addEventListener('click', () => showImage(-1));
+    if (nextBtn) nextBtn.addEventListener('click', () => showImage(1));
 
     if (scroller && comparisonContainer) {
         // Mouse
@@ -898,6 +922,7 @@ window.addEventListener('load', () => {
 const galeriaGrid = document.querySelector('.portfolio-grid');
 if (galeriaGrid) {
     async function renderList(imgList) {
+        if (window.updateDynamicFilters) window.updateDynamicFilters(imgList);
         galeriaGrid.innerHTML = '';
         // If imgList contains objects, sort by .order if present
         let list = Array.isArray(imgList) ? imgList.slice() : [];
@@ -912,7 +937,7 @@ if (galeriaGrid) {
             const isObj = (typeof entry === 'object' && entry !== null);
             const layout = isObj ? (entry.layout || 'normal') : 'normal';
             const rotation = isObj ? parseInt(entry.rotation || 0, 10) : 0;
-            const title = isObj ? (entry.title || 'Galería Sueños') : `Galería de Sueños ${i+1}`;
+            const title = isObj ? (entry.title || 'Galería Sueños') : `Galería de Sueños ${i + 1}`;
             const category = isObj ? (entry.category || 'sin categoría') : 'sin categoría';
             const url = (typeof entry === 'string') ? entry : (isObj ? (entry.url || entry.src || '') : '');
 
