@@ -34,7 +34,12 @@ service cloud.firestore {
       allow delete: if true;
     }
 
-    // Deny writes to other collections from the client by default.
+    // Papelera collection: allow full access for the dashboard management.
+    match /papelera/{docId} {
+      allow read, write, delete: if true;
+    }
+
+    // Default: allow reading but deny writes to any other collection.
     match /{document=**} {
       allow read: if true;
       allow write: if false;

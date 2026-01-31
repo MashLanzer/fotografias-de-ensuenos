@@ -1,3 +1,3 @@
-https://fotografias-ensuenos-35972.web.app
+Web Principal: https://fotografias-ensuenos-35972.web.app
 
-https://fotografias-ensuenos-35972.web.app/dashboard
+Web Dashboard: https://fotografias-ensuenos-35972.web.app/dashboard
