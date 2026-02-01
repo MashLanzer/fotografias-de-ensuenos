@@ -20,6 +20,7 @@
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="mobile.css">
 </head>
 
 <body>
@@ -676,7 +677,30 @@
         </div>
     </footer>
 
-    <!-- WhatsApp Float Button -->
+    <!-- Mobile Bottom Navigation (Visible only on Mobile) -->
+    <nav class="mobile-bottom-nav">
+        <a href="#inicio" class="nav-item">
+            <i class="fa-solid fa-house"></i>
+            <span>Inicio</span>
+        </a>
+        <a href="#portafolio" class="nav-item">
+            <i class="fa-solid fa-camera-retro"></i>
+            <span>Galería</span>
+        </a>
+        <a href="#contacto" class="nav-item highlight">
+            <i class="fa-solid fa-calendar-check"></i>
+        </a>
+        <a href="#manuel" class="nav-item">
+            <i class="fa-solid fa-user"></i>
+            <span>Manuel</span>
+        </a>
+        <a href="https://wa.me/17866897061" target="_blank" class="nav-item">
+            <i class="fa-brands fa-whatsapp"></i>
+            <span>WhatsApp</span>
+        </a>
+    </nav>
+
+    <!-- WhatsApp Float Button (Desktop Only via CSS) -->
     <a href="https://wa.me/17866897061" class="whatsapp-float" target="_blank" title="Contactar por WhatsApp">
         <i class="fa-brands fa-whatsapp"></i>
     </a>

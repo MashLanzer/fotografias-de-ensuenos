@@ -1138,6 +1138,11 @@ footer {
     background-color: #1ebe57;
 }
 
+/* Mobile Bottom Nav Hidden by default (Hidden on PC) */
+.mobile-bottom-nav {
+    display: none;
+}
+
 /* Animations */
 .fade-in-up {
     animation: fadeInUp 1s ease forwards;

@@ -1,0 +1,420 @@
+/* --- STABLE MOBILE APP UI --- 
+   Dedicated professional mobile experience.
+*/
+
+@media (max-width: 992px) {
+    .container {
+        padding: 0 30px;
+    }
+
+    .about-grid,
+    .contact-wrapper {
+        grid-template-columns: 1fr;
+        gap: 40px;
+    }
+
+    .portfolio-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    html {
+        font-size: 13px;
+    }
+
+    .container {
+        padding: 0 20px;
+    }
+
+    /* Minimalist Navbar */
+    .navbar {
+        padding: 12px 0;
+        background: rgba(13, 13, 13, 0.98);
+    }
+
+    .nav-container {
+        justify-content: center;
+        position: relative;
+    }
+
+    .theme-toggle {
+        position: absolute;
+        right: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 1002;
+    }
+
+    .hamburger,
+    .nav-links {
+        display: none !important;
+    }
+
+    .logo {
+        font-size: 1.2rem;
+        margin: 0 auto;
+        letter-spacing: 1px;
+    }
+
+    /* Clean Hero */
+    .hero {
+        padding-top: 60px;
+    }
+
+    .hero h1 {
+        font-size: 2.2rem;
+        line-height: 1.2;
+        margin-bottom: 15px;
+        text-align: center;
+    }
+
+    .hero p {
+        font-size: 1rem;
+        margin-bottom: 30px;
+        text-align: center;
+        max-width: 90%;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .hero-buttons {
+        display: flex;
+        flex-direction: row;
+        gap: 10px;
+        justify-content: center;
+        width: 100%;
+        padding: 0 10px;
+    }
+
+    .hero-buttons .btn {
+        padding: 12px 15px;
+        font-size: 0.85rem;
+        flex: 1;
+        max-width: 150px;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+    }
+
+    /* Section Styling */
+    .section {
+        padding: 50px 0 90px 0;
+    }
+
+    .section-title {
+        font-size: 1.8rem;
+        text-align: center !important;
+        margin-bottom: 20px !important;
+    }
+
+    /* Services Swipe */
+    .services-grid {
+        display: flex;
+        overflow-x: auto;
+        gap: 15px;
+        padding: 10px 5px 30px 5px;
+        scrollbar-width: none;
+    }
+
+    .services-grid::-webkit-scrollbar {
+        display: none;
+    }
+
+    .service-card {
+        flex: 0 0 85%;
+        padding: 25px 20px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        text-align: center;
+    }
+
+    /* Manuel Section: Modern Circular Design */
+    .profile-manuel .about-grid {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .profile-manuel .about-image {
+        width: 200px;
+        height: 200px;
+        margin: 0 auto 35px;
+        position: relative;
+        padding: 0;
+    }
+
+    .profile-manuel .about-image img {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid var(--accent-color);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+        position: relative;
+        z-index: 2;
+    }
+
+    .profile-manuel .about-image::before {
+        content: '';
+        position: absolute;
+        top: -10px;
+        left: -10px;
+        right: -10px;
+        bottom: -10px;
+        border: 1px dashed var(--accent-color);
+        border-radius: 50%;
+        animation: rotate 20s linear infinite;
+        z-index: 1;
+    }
+
+    @keyframes rotate {
+        from {
+            transform: rotate(0deg);
+        }
+
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .profile-manuel .about-text {
+        text-align: center;
+        align-items: center;
+    }
+
+    .profile-manuel .about-text p {
+        text-align: center;
+    }
+
+    .profile-manuel .signature {
+        justify-content: center;
+        margin-top: 20px;
+    }
+
+    /* Contact Section: Perfect Centering & Layout */
+    .contact-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+        align-items: center;
+        /* Center horizontally */
+        width: 100% !important;
+        padding: 0 !important;
+        /* Force reset desktop padding */
+        background: transparent !important;
+        /* Clean for mobile */
+        box-sizing: border-box;
+    }
+
+    .contact-info,
+    .contact-form-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        text-align: center;
+        background: var(--bg-secondary);
+        padding: 35px 20px;
+        border-radius: 25px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+        box-sizing: border-box;
+    }
+
+    .contact-info h2 {
+        font-size: 2rem;
+        margin-bottom: 12px;
+    }
+
+    .contact-info>p {
+        font-size: 1.1rem;
+        margin-bottom: 30px;
+        color: var(--text-muted);
+    }
+
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+        padding: 22px;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .info-item i {
+        font-size: 1.8rem;
+        color: var(--accent-color);
+        background: rgba(205, 164, 94, 0.1);
+        width: 55px;
+        height: 55px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+    }
+
+    /* Green highlight for WhatsApp */
+    .info-item:first-of-type {
+        border-color: rgba(37, 211, 102, 0.3);
+        background: rgba(37, 211, 102, 0.05);
+    }
+
+    .info-item:first-of-type i {
+        color: #25d366;
+        background: rgba(37, 211, 102, 0.1);
+    }
+
+    .info-item h4 {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: var(--accent-color);
+        margin: 0;
+    }
+
+    .info-item p {
+        font-size: 1.1rem;
+        margin: 0;
+        font-weight: 400;
+        line-height: 1.4;
+    }
+
+    .info-item small {
+        font-size: 0.85rem;
+        color: #25d366;
+        font-weight: 600;
+        display: block;
+        margin-top: 5px;
+    }
+
+    .contact-form textarea {
+        height: 120px !important;
+        /* Fixed height for mobile */
+    }
+
+    .contact-form input,
+    .contact-form select,
+    .contact-form textarea {
+        background: rgba(255, 255, 255, 0.03) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 12px !important;
+        padding: 15px !important;
+        font-size: 1rem !important;
+    }
+
+    .contact-form .btn-block {
+        margin-top: 10px;
+        padding: 18px !important;
+        /* Larger touch target */
+        font-size: 1.1rem !important;
+        border-radius: 15px !important;
+    }
+
+    /* Balanced Stats */
+    .stat-item {
+        flex: 1;
+        padding: 20px 15px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        text-align: center;
+    }
+
+    .stat-item h4 {
+        font-size: 1.8rem;
+        color: var(--accent-color);
+        margin-bottom: 5px;
+    }
+
+    .stat-item p {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    /* Portafolio Grid */
+    .portfolio-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        grid-auto-rows: 150px;
+    }
+
+    .portfolio-item.wide,
+    .portfolio-item.tall {
+        grid-column: span 1;
+        grid-row: span 1;
+    }
+
+    /* App Bottom Nav: Larger Items & Better Touch Targets */
+    .mobile-bottom-nav {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 75px;
+        /* Slightly taller */
+        background: rgba(13, 13, 13, 0.98);
+        backdrop-filter: blur(15px);
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        z-index: 2000;
+        justify-content: space-around;
+        align-items: center;
+        padding-bottom: env(safe-area-inset-bottom);
+        box-shadow: 0 -5px 25px rgba(0, 0, 0, 0.6);
+    }
+
+    .nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        color: #999;
+        font-size: 0.8rem;
+        /* Larger text */
+        text-decoration: none;
+        flex: 1;
+        padding: 10px 0;
+    }
+
+    .nav-item i {
+        font-size: 1.4rem;
+        /* Larger icons */
+    }
+
+    .nav-item.highlight {
+        background: var(--accent-color);
+        width: 60px;
+        height: 60px;
+        flex: 0 0 60px;
+        /* Force size, no stretch */
+        border-radius: 50% !important;
+        /* Perfect circle */
+        color: #000 !important;
+        margin-top: -35px;
+        border: 5px solid var(--bg-color);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        box-shadow: 0 5px 20px rgba(205, 164, 94, 0.5);
+    }
+
+    .nav-item.highlight span {
+        display: none;
+        /* No text for the highlight circle */
+    }
+
+    .nav-item.highlight i {
+        font-size: 1.8rem;
+    }
+
+    .whatsapp-float {
+        display: none !important;
+    }
+}
