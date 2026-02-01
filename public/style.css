@@ -292,9 +292,172 @@ body.light-mode .navbar.scrolled {
     }
 }
 
+/* Camera Lens Visuals */
+.hero-camera-visuals {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.iris-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 250vmax;
+    /* Enough to cover screen even when rotated */
+    height: 250vmax;
+    transform: translate(-50%, -50%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2;
+}
+
+.iris-blade {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at center, #111 0%, #000 100%);
+    border-left: 2px solid rgba(255, 255, 255, 0.1);
+    /* Fully open by default */
+    clip-path: polygon(150% 50%, 200% -100%, 200% 200%);
+    transform-origin: center center;
+    animation: irisAction 10s infinite cubic-bezier(0.7, 0, 0.3, 1);
+}
+
+/* Position each of the 8 blades */
+.iris-blade:nth-child(1) {
+    transform: rotate(0deg);
+}
+
+.iris-blade:nth-child(2) {
+    transform: rotate(45deg);
+}
+
+.iris-blade:nth-child(3) {
+    transform: rotate(90deg);
+}
+
+.iris-blade:nth-child(4) {
+    transform: rotate(135deg);
+}
+
+.iris-blade:nth-child(5) {
+    transform: rotate(180deg);
+}
+
+.iris-blade:nth-child(6) {
+    transform: rotate(225deg);
+}
+
+.iris-blade:nth-child(7) {
+    transform: rotate(270deg);
+}
+
+.iris-blade:nth-child(8) {
+    transform: rotate(315deg);
+}
+
+@keyframes irisAction {
+
+    0%,
+    10%,
+    90%,
+    100% {
+        /* Fully Open - Photo visible */
+        clip-path: polygon(150% 50%, 200% -100%, 200% 200%);
+    }
+
+    40% {
+        /* Focusing (Small Frame) */
+        clip-path: polygon(75% 50%, 150% -50%, 150% 150%);
+    }
+
+    50% {
+        /* Shutter Snapshot (Full Close) */
+        clip-path: polygon(50% 50%, 150% -50%, 150% 150%);
+    }
+
+    55% {
+        /* Quick Re-open */
+        clip-path: polygon(150% 50%, 200% -100%, 200% 200%);
+    }
+}
+
+/* Flash effect to mimic shutter */
+.hero::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #fff;
+    opacity: 0;
+    z-index: 10;
+    pointer-events: none;
+    animation: shutterFlash 10s infinite;
+}
+
+@keyframes shutterFlash {
+
+    0%,
+    49%,
+    52%,
+    100% {
+        opacity: 0;
+    }
+
+    50% {
+        opacity: 0.4;
+    }
+}
+
+.lens-flare {
+    position: absolute;
+    top: 30%;
+    left: 20%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(205, 164, 94, 0.1) 0%, transparent 70%);
+    z-index: 5;
+    filter: blur(30px);
+    animation: flarePulse 12s infinite;
+}
+
+@keyframes flarePulse {
+
+    0%,
+    100% {
+        opacity: 0.3;
+        transform: scale(1) translate(0, 0);
+    }
+
+    15% {
+        opacity: 0.8;
+        transform: scale(1.5) translate(20px, 10px);
+    }
+
+    45% {
+        opacity: 0.1;
+        transform: scale(0.5);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+    }
+}
+
 .hero-content {
     position: relative;
-    z-index: 1;
+    z-index: 15;
+    /* Above everything */
     max-width: 800px;
     padding: 0 20px;
 }
